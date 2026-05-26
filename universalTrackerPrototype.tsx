@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   Home, TrendingUp, CreditCard, Brain, ShoppingCart,
-  Plus, Bell, BellOff, Clock, ChevronRight, X, Check, Mic, Video,
+  Plus, Bell, BellOff, Clock, ChevronLeft, ChevronRight, X, Check, Mic, Video,
   Calendar, AlertCircle, Zap, Users, Trash2,
   Settings, Activity, Sparkles, Package,
   ArrowRight, Coffee, Sun, Moon as MoonIcon, Flame,
   TrendingDown, Wallet, BookOpen, MapPin, Repeat,
   Camera, ChevronDown, ChevronUp, FileText, ListChecks, Loader2,
-  Dumbbell, Apple, Droplet
+  Dumbbell, Apple, Droplet, User
 } from 'lucide-react';
 
 const STORE_KEY = 'utracker:data:v1';
@@ -60,6 +60,14 @@ const defaultData = {
       { id: 'p4', name: 'Pasta', qty: 4, lowThreshold: 2, unit: 'box' }
     ],
     members: ['You', 'Sam', 'Alex']
+  },
+  profile: {
+    notifications: {
+      master: true,
+      leadTime: 15,             // 5 | 15 | 30
+      quietStart: '22:00',
+      quietEnd: '07:00'
+    }
   }
 };
 
@@ -139,12 +147,23 @@ export default function UniversalTracker() {
   useEffect(() => {
     (async () => {
       try {
-        const r = await window.storage.get(STORE_KEY);
-        if (r && r.value) {
-          setData(JSON.parse(r.value));
+        let raw = null;
+        // Prefer Claude-artifacts API if present, else localStorage
+        if (typeof window !== 'undefined' && window.storage?.get) {
+          const r = await window.storage.get(STORE_KEY);
+          raw = r?.value || null;
+        } else if (typeof localStorage !== 'undefined') {
+          raw = localStorage.getItem(STORE_KEY);
+        }
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          setData({ ...defaultData, ...parsed, profile: { ...defaultData.profile, ...(parsed.profile || {}) } });
         } else {
           setData(defaultData);
-          await window.storage.set(STORE_KEY, JSON.stringify(defaultData));
+          try {
+            if (window.storage?.set) await window.storage.set(STORE_KEY, JSON.stringify(defaultData));
+            else localStorage.setItem(STORE_KEY, JSON.stringify(defaultData));
+          } catch {}
         }
       } catch (e) {
         setData(defaultData);
@@ -159,7 +178,10 @@ export default function UniversalTracker() {
 
   const save = async (next) => {
     setData(next);
-    try { await window.storage.set(STORE_KEY, JSON.stringify(next)); } catch {}
+    try {
+      if (window.storage?.set) await window.storage.set(STORE_KEY, JSON.stringify(next));
+      else localStorage.setItem(STORE_KEY, JSON.stringify(next));
+    } catch {}
   };
 
   const flash = (msg) => {
@@ -195,33 +217,10 @@ export default function UniversalTracker() {
           {tab === 'brain' && <BrainScreen data={data} save={save} setModal={setModal} flash={flash} />}
           {tab === 'grocery' && <GroceryScreen data={data} save={save} setModal={setModal} flash={flash} />}
           {tab === 'body' && <BodyScreen data={data} now={now} save={save} setModal={setModal} flash={flash} />}
+          {tab === 'profile' && <ProfileScreen data={data} save={save} flash={flash} />}
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 bg-zinc-950/95 backdrop-blur-xl border-t border-zinc-800/80 px-2 py-2 pb-3">
-          <div className="flex justify-around items-center">
-            {[
-              { id: 'home', icon: Home, label: 'Home' },
-              { id: 'killzone', icon: TrendingUp, label: 'Trading' },
-              { id: 'subs', icon: CreditCard, label: 'Spend' },
-              { id: 'brain', icon: Brain, label: 'Capture' },
-              { id: 'grocery', icon: ShoppingCart, label: 'Pantry' },
-              { id: 'body', icon: Dumbbell, label: 'Body' }
-            ].map((it) => {
-              const active = tab === it.id;
-              const Icon = it.icon;
-              return (
-                <button
-                  key={it.id}
-                  onClick={() => setTab(it.id)}
-                  className={`flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-xl transition-all ${active ? 'text-cyan-400' : 'text-zinc-500 hover:text-zinc-300'}`}
-                >
-                  <Icon size={20} strokeWidth={active ? 2.4 : 1.8} />
-                  <span className="text-[10px] font-medium">{it.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <BottomNav tab={tab} setTab={setTab} />
 
         {toast && (
           <div className="absolute top-6 left-1/2 -translate-x-1/2 bg-zinc-100 text-zinc-900 px-4 py-2 rounded-full text-xs font-medium shadow-lg z-50">
@@ -1617,6 +1616,273 @@ function MacroCard({ icon: Icon, iconColor, label, used, goal, unit, pct, barCol
         <div className={`h-full ${barColor} rounded-full`} style={{ width: `${Math.min(100, pct)}%` }}></div>
       </div>
     </div>
+  );
+}
+
+/* ─── BOTTOM NAV (fixed Home + Profile, scrollable middle) ─────────────── */
+const NAV_TABS = [
+  { id: 'home', icon: Home, label: 'Home', fixed: 'left' },
+  { id: 'killzone', icon: TrendingUp, label: 'Trading' },
+  { id: 'subs', icon: CreditCard, label: 'Spend' },
+  { id: 'brain', icon: Brain, label: 'Capture' },
+  { id: 'grocery', icon: ShoppingCart, label: 'Pantry' },
+  { id: 'body', icon: Dumbbell, label: 'Body' },
+  { id: 'profile', icon: User, label: 'Profile', fixed: 'right' }
+];
+
+function BottomNav({ tab, setTab }) {
+  const scrollerRef = useRef(null);
+  const [canLeft, setCanLeft] = useState(false);
+  const [canRight, setCanRight] = useState(false);
+
+  const home = NAV_TABS.find(t => t.fixed === 'left');
+  const profile = NAV_TABS.find(t => t.fixed === 'right');
+  const middle = NAV_TABS.filter(t => !t.fixed);
+
+  // Auto-scroll active middle tab into view
+  useEffect(() => {
+    const el = scrollerRef.current?.querySelector(`[data-tab="${tab}"]`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }, [tab]);
+
+  // Track scroll-edge state so chevrons reflect available scope
+  useEffect(() => {
+    const sc = scrollerRef.current;
+    if (!sc) return;
+    const update = () => {
+      const max = sc.scrollWidth - sc.clientWidth;
+      setCanLeft(sc.scrollLeft > 1);
+      setCanRight(sc.scrollLeft < max - 1);
+    };
+    update();
+    sc.addEventListener('scroll', update, { passive: true });
+    const ro = new ResizeObserver(update);
+    ro.observe(sc);
+    return () => {
+      sc.removeEventListener('scroll', update);
+      ro.disconnect();
+    };
+  }, []);
+
+  const cellW = 'calc(100cqi / 5.5)';
+  const maskLeft = canLeft ? '12%' : '0';
+  const maskRight = canRight ? '88%' : '100%';
+
+  return (
+    <div
+      className="absolute bottom-0 left-0 right-0 bg-zinc-950/95 backdrop-blur-xl border-t border-zinc-800/80 pb-3 pt-2"
+      style={{ containerType: 'inline-size' }}
+    >
+      <div className="flex items-stretch">
+        <NavCell item={home} active={tab === home.id} onClick={() => setTab(home.id)} width={cellW} />
+
+        <div className="relative" style={{ width: `calc(100cqi * 3.5 / 5.5)` }}>
+          <div
+            ref={scrollerRef}
+            className="flex overflow-x-auto scroll-smooth snap-x snap-mandatory"
+            style={{
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
+              maskImage: `linear-gradient(to right, transparent 0, black ${maskLeft}, black ${maskRight}, transparent 100%)`,
+              WebkitMaskImage: `linear-gradient(to right, transparent 0, black ${maskLeft}, black ${maskRight}, transparent 100%)`
+            }}
+          >
+            <style>{`.nav-scroller::-webkit-scrollbar{display:none}`}</style>
+            {middle.map(it => (
+              <div key={it.id} data-tab={it.id} className="flex-none snap-start" style={{ width: cellW }}>
+                <NavCell item={it} active={tab === it.id} onClick={() => setTab(it.id)} width="100%" />
+              </div>
+            ))}
+          </div>
+          {canLeft && (
+            <div className="pointer-events-none absolute left-0.5 top-1/2 -translate-y-1/2 flex items-center text-cyan-400/90">
+              <ChevronLeft size={18} strokeWidth={2.5} />
+            </div>
+          )}
+          {canRight && (
+            <div className="pointer-events-none absolute right-0.5 top-1/2 -translate-y-1/2 flex items-center text-cyan-400/90">
+              <ChevronRight size={18} strokeWidth={2.5} />
+            </div>
+          )}
+        </div>
+
+        <NavCell item={profile} active={tab === profile.id} onClick={() => setTab(profile.id)} width={cellW} />
+      </div>
+    </div>
+  );
+}
+
+function NavCell({ item, active, onClick, width }) {
+  const Icon = item.icon;
+  return (
+    <button
+      onClick={onClick}
+      className={`flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-xl transition-colors ${active ? 'text-cyan-400' : 'text-zinc-500 hover:text-zinc-300'}`}
+      style={{ width, flex: 'none' }}
+    >
+      <Icon size={20} strokeWidth={active ? 2.4 : 1.8} />
+      <span className="text-[10px] font-medium">{item.label}</span>
+    </button>
+  );
+}
+
+/* ─── PROFILE ──────────────────────────────────────────── */
+function ProfileScreen({ data, save, flash }) {
+  const p = data.profile;
+
+  const saveProfile = (patch) => {
+    save({ ...data, profile: { ...p, ...patch } });
+  };
+
+  const setNotif = (patch) => {
+    saveProfile({ notifications: { ...p.notifications, ...patch } });
+  };
+
+  const exportJson = () => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `tracker-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    flash('Exported');
+  };
+
+  const resetAll = () => {
+    if (!confirm('Reset everything to defaults? This cannot be undone.')) return;
+    localStorage.removeItem('utracker:data:v1');
+    location.reload();
+  };
+
+  return (
+    <div className="px-5 pt-6 space-y-5">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Profile</h1>
+        <p className="text-zinc-500 text-sm mt-0.5">Reminders · household · data</p>
+      </div>
+
+      <div className="rounded-2xl bg-zinc-900/60 ring-1 ring-zinc-800 p-4 flex items-center gap-3">
+        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-500/30 to-violet-500/30 ring-1 ring-zinc-700 flex items-center justify-center text-xl">
+          👤
+        </div>
+        <div className="flex-1">
+          <div className="text-sm font-semibold text-zinc-100">You</div>
+          <div className="text-[11px] text-zinc-500">Timezone · {Intl.DateTimeFormat().resolvedOptions().timeZone}</div>
+        </div>
+      </div>
+
+      {/* Killzone reminders */}
+      <Section title="Killzone reminders">
+        <div className="rounded-2xl bg-zinc-900/60 ring-1 ring-zinc-800 divide-y divide-zinc-800/60 overflow-hidden">
+          <button
+            onClick={() => setNotif({ master: !p.notifications.master })}
+            className="w-full flex items-center gap-3 p-3.5 text-left hover:bg-zinc-900 transition"
+          >
+            <div className="flex-1">
+              <div className="text-sm font-semibold text-zinc-100">All alerts</div>
+              <div className="text-[11px] text-zinc-500">Master switch for every reminder</div>
+            </div>
+            <Toggle on={p.notifications.master} />
+          </button>
+
+          <div className={`p-4 ${p.notifications.master ? '' : 'opacity-40 pointer-events-none'}`}>
+            <div className="text-[11px] uppercase tracking-wider text-zinc-500 mb-2">Default lead-time</div>
+            <ChipGroup
+              options={[5, 15, 30].map(m => ({ id: m, label: `${m} min` }))}
+              value={p.notifications.leadTime}
+              onChange={(v) => setNotif({ leadTime: v })}
+            />
+          </div>
+
+          <div className={`p-4 ${p.notifications.master ? '' : 'opacity-40 pointer-events-none'}`}>
+            <div className="text-[11px] uppercase tracking-wider text-zinc-500 mb-2">Quiet hours</div>
+            <div className="flex items-center gap-2">
+              <TimeInput value={p.notifications.quietStart} onChange={(v) => setNotif({ quietStart: v })} />
+              <span className="text-zinc-500 text-xs">to</span>
+              <TimeInput value={p.notifications.quietEnd} onChange={(v) => setNotif({ quietEnd: v })} />
+            </div>
+          </div>
+        </div>
+      </Section>
+
+      {/* Household */}
+      <Section title="Household">
+        <div className="rounded-2xl bg-zinc-900/60 ring-1 ring-zinc-800 p-4">
+          <div className="text-sm font-semibold text-zinc-200 mb-2">Members</div>
+          <div className="flex flex-wrap gap-1.5">
+            {(data.groceries?.members || []).map(m => (
+              <span key={m} className="text-[11px] px-2 py-1 rounded-full bg-zinc-800/60 text-zinc-300">{m}</span>
+            ))}
+          </div>
+        </div>
+      </Section>
+
+      {/* Data */}
+      <Section title="Data">
+        <button onClick={exportJson} className="w-full rounded-2xl bg-zinc-900/60 ring-1 ring-zinc-800 p-4 text-left hover:bg-zinc-900 transition">
+          <div className="text-sm font-semibold text-zinc-200">Export JSON</div>
+          <div className="text-[11px] text-zinc-500 mt-0.5">Download a full backup of your data</div>
+        </button>
+        <button onClick={resetAll} className="w-full rounded-2xl bg-zinc-900/60 ring-1 ring-rose-900/40 p-4 text-left hover:bg-rose-950/30 transition">
+          <div className="text-sm font-semibold text-rose-400">Reset to defaults</div>
+          <div className="text-[11px] text-zinc-500 mt-0.5">Clears all local data</div>
+        </button>
+      </Section>
+
+      <div className="text-center text-[10px] text-zinc-600 pt-2 pb-4">Tracker prototype · v0.2</div>
+    </div>
+  );
+}
+
+/* ─── PROFILE atoms ────────────────────────────────────── */
+function Section({ title, right, children }) {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2 px-1">
+        <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">{title}</div>
+        {right}
+      </div>
+      <div className="space-y-2">{children}</div>
+    </div>
+  );
+}
+
+function Toggle({ on }) {
+  return (
+    <div className={`w-10 h-6 rounded-full transition relative flex-none ${on ? 'bg-cyan-500/80' : 'bg-zinc-700'}`}>
+      <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${on ? 'left-[18px]' : 'left-0.5'}`} />
+    </div>
+  );
+}
+
+function ChipGroup({ options, value, onChange }) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {options.map(o => {
+        const active = value === o.id;
+        return (
+          <button
+            key={o.id}
+            onClick={() => onChange(o.id)}
+            className={`text-xs px-3 py-1.5 rounded-full transition ${active ? 'bg-cyan-500/20 text-cyan-300 ring-1 ring-cyan-500/40' : 'bg-zinc-800/60 text-zinc-400 hover:bg-zinc-800'}`}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function TimeInput({ value, onChange }) {
+  return (
+    <input
+      type="time"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="bg-zinc-800/60 rounded-lg px-3 py-1.5 text-sm text-zinc-200 ring-1 ring-zinc-700 focus:ring-cyan-500/60 focus:outline-none tabular-nums"
+    />
   );
 }
 
