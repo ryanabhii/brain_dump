@@ -7,7 +7,8 @@ import {
   ArrowRight, Coffee, Sun, Moon as MoonIcon, Flame,
   TrendingDown, Wallet, BookOpen, MapPin, Repeat,
   Camera, ChevronDown, ChevronUp, FileText, ListChecks, Loader2,
-  Dumbbell, Apple, Droplet, User
+  Dumbbell, Apple, Droplet, User,
+  DollarSign, ArrowDownCircle, ArrowUpCircle, Search, Edit3, Snowflake, Moon
 } from 'lucide-react';
 
 const STORE_KEY = 'utracker:data:v1';
@@ -28,18 +29,32 @@ const todayPlus = (d) => {
 
 const defaultData = {
   killzones: [
-    { id: 'kz1', name: 'Asian', startMin: 19 * 60, endMin: 21 * 60 + 30, color: 'amber', alertOn: true, alertBefore: 15, journal: [] },
-    { id: 'kz2', name: 'London', startMin: 2 * 60, endMin: 5 * 60, color: 'sky', alertOn: true, alertBefore: 15, journal: [] },
-    { id: 'kz3', name: 'NY AM', startMin: 8 * 60 + 30, endMin: 11 * 60, color: 'rose', alertOn: true, alertBefore: 30, journal: [{ id: 'j1', date: todayPlus(-1), result: 'W', note: 'OB sweep, clean retest' }] },
-    { id: 'kz4', name: 'London Close', startMin: 10 * 60, endMin: 12 * 60, color: 'violet', alertOn: false, alertBefore: 15, journal: [] },
-    { id: 'kz5', name: 'NY PM', startMin: 13 * 60 + 30, endMin: 16 * 60, color: 'emerald', alertOn: true, alertBefore: 15, journal: [] }
+    { id: 'kz1', name: 'Asian', startMin: 19 * 60, endMin: 21 * 60 + 30, color: 'amber', alertOn: true, alertBefore: 15, journal: [], checklist: ['HTF bias set', 'News checked', 'Risk defined'], skipUntil: null },
+    { id: 'kz2', name: 'London', startMin: 2 * 60, endMin: 5 * 60, color: 'sky', alertOn: true, alertBefore: 15, journal: [], checklist: ['HTF bias set', 'News checked', 'Risk defined'], skipUntil: null },
+    { id: 'kz3', name: 'NY AM', startMin: 8 * 60 + 30, endMin: 11 * 60, color: 'rose', alertOn: true, alertBefore: 30, journal: [{ id: 'j1', date: todayPlus(-1), result: 'W', note: 'OB sweep, clean retest' }], checklist: ['HTF bias set', 'News checked', 'Risk defined'], skipUntil: null },
+    { id: 'kz4', name: 'London Close', startMin: 10 * 60, endMin: 12 * 60, color: 'violet', alertOn: false, alertBefore: 15, journal: [], checklist: ['HTF bias set', 'News checked', 'Risk defined'], skipUntil: null },
+    { id: 'kz5', name: 'NY PM', startMin: 13 * 60 + 30, endMin: 16 * 60, color: 'emerald', alertOn: true, alertBefore: 15, journal: [], checklist: ['HTF bias set', 'News checked', 'Risk defined'], skipUntil: null }
   ],
+  trading: {
+    accounts: [
+      { id: 'acc1', name: 'FTMO Challenge', type: 'broker', currency: 'USD', balance: 102350 },
+      { id: 'acc2', name: 'Personal Live', type: 'broker', currency: 'USD', balance: 8240 },
+      { id: 'acc3', name: 'Kraken', type: 'wallet', currency: 'USD', balance: 1820 }
+    ],
+    flows: [
+      { id: 'f1', accountId: 'acc1', type: 'deposit', amount: 100000, date: todayPlus(-25), note: 'Challenge funding' },
+      { id: 'f2', accountId: 'acc2', type: 'deposit', amount: 5000, date: todayPlus(-90), note: 'Initial' },
+      { id: 'f3', accountId: 'acc2', type: 'deposit', amount: 2000, date: todayPlus(-12), note: 'Top-up' },
+      { id: 'f4', accountId: 'acc2', type: 'withdrawal', amount: 500, date: todayPlus(-3), note: 'Profit pull' },
+      { id: 'f5', accountId: 'acc3', type: 'deposit', amount: 2000, date: todayPlus(-40), note: 'BTC swing' }
+    ]
+  },
   subscriptions: [
-    { id: 's1', name: 'Anthropic API', cost: 200, cycle: 'monthly', nextRenewal: todayPlus(8), type: 'api', apiCap: 200, apiUsed: 142, category: 'AI', startedAt: todayPlus(-22) },
-    { id: 's2', name: 'OpenAI API', cost: 50, cycle: 'monthly', nextRenewal: todayPlus(14), type: 'api', apiCap: 50, apiUsed: 18, category: 'AI', startedAt: todayPlus(-16) },
-    { id: 's3', name: 'Netflix', cost: 15.49, cycle: 'monthly', nextRenewal: todayPlus(3), type: 'subscription', category: 'Entertainment' },
-    { id: 's4', name: 'Notion', cost: 10, cycle: 'monthly', nextRenewal: todayPlus(21), type: 'subscription', category: 'Productivity' },
-    { id: 's5', name: 'TradingView', cost: 59.95, cycle: 'monthly', nextRenewal: todayPlus(1), type: 'subscription', category: 'Trading' }
+    { id: 's1', name: 'Anthropic API', cost: 200, cycle: 'monthly', nextRenewal: todayPlus(8), type: 'api', apiCap: 200, apiUsed: 142, category: 'AI', startedAt: todayPlus(-22), usedThisMonth: true, lastUsedReset: todayPlus(-2) },
+    { id: 's2', name: 'OpenAI API', cost: 50, cycle: 'monthly', nextRenewal: todayPlus(14), type: 'api', apiCap: 50, apiUsed: 18, category: 'AI', startedAt: todayPlus(-16), usedThisMonth: true, lastUsedReset: todayPlus(-2) },
+    { id: 's3', name: 'Netflix', cost: 15.49, cycle: 'monthly', nextRenewal: todayPlus(3), type: 'subscription', category: 'Entertainment', usedThisMonth: false, lastUsedReset: todayPlus(-35) },
+    { id: 's4', name: 'Notion', cost: 10, cycle: 'monthly', nextRenewal: todayPlus(21), type: 'subscription', category: 'Productivity', usedThisMonth: true, lastUsedReset: todayPlus(-2) },
+    { id: 's5', name: 'TradingView', cost: 59.95, cycle: 'monthly', nextRenewal: todayPlus(1), type: 'subscription', category: 'Trading', usedThisMonth: true, lastUsedReset: todayPlus(-2) }
   ],
   braindumps: [
     { id: 'b1', type: 'text', text: 'Call mom Sunday morning', createdAt: todayPlus(-1), reminderAt: todayPlus(2), completed: false, tag: 'personal' },
@@ -48,10 +63,10 @@ const defaultData = {
   ],
   groceries: {
     list: [
-      { id: 'g1', name: 'Eggs', qty: 12, category: 'Dairy', addedBy: 'You', completed: false },
-      { id: 'g2', name: 'Sourdough bread', qty: 1, category: 'Bakery', addedBy: 'Sam', completed: false },
-      { id: 'g3', name: 'Olive oil', qty: 1, category: 'Pantry', addedBy: 'You', completed: false },
-      { id: 'g4', name: 'Avocados', qty: 4, category: 'Produce', addedBy: 'Alex', completed: true }
+      { id: 'g1', name: 'Eggs', qty: 12, category: 'Dairy', addedBy: 'You', completed: false, recurring: 'weekly' },
+      { id: 'g2', name: 'Sourdough bread', qty: 1, category: 'Bakery', addedBy: 'Sam', completed: false, recurring: null },
+      { id: 'g3', name: 'Olive oil', qty: 1, category: 'Pantry', addedBy: 'You', completed: false, recurring: null },
+      { id: 'g4', name: 'Avocados', qty: 4, category: 'Produce', addedBy: 'Alex', completed: true, recurring: null }
     ],
     pantry: [
       { id: 'p1', name: 'Olive oil', qty: 0, lowThreshold: 1, unit: 'bottle' },
@@ -59,15 +74,24 @@ const defaultData = {
       { id: 'p3', name: 'Coffee beans', qty: 1, lowThreshold: 1, unit: 'bag' },
       { id: 'p4', name: 'Pasta', qty: 4, lowThreshold: 2, unit: 'box' }
     ],
-    members: ['You', 'Sam', 'Alex']
+    members: ['You', 'Sam', 'Alex'],
+    lastRecurringRun: todayPlus(-8)
+  },
+  body: {
+    macros: { calories: { used: 1840, goal: 2400 }, protein: { used: 142, goal: 180 }, carbs: { used: 210, goal: 280 }, fat: { used: 58, goal: 80 }, water: { used: 6, goal: 10 } },
+    streak: 12,
+    streakFreezes: 1,
+    lastSleep: { hours: 7.2, rpe: 3, date: todayPlus(0) }
   },
   profile: {
     notifications: {
       master: true,
       leadTime: 15,             // 5 | 15 | 30
       quietStart: '22:00',
-      quietEnd: '07:00'
-    }
+      quietEnd: '07:00',
+      browserPermission: 'default' // default | granted | denied
+    },
+    dailyReviewTime: '21:00'
   }
 };
 
@@ -102,6 +126,88 @@ function timeUntil(targetMin) {
   const h = Math.floor(diff / 60);
   const m = diff % 60;
   return { h, m, total: diff };
+}
+
+/* ─── EXTRA HELPERS ─────────────────────────────────────── */
+function startOfWeek(d = new Date()) {
+  const x = new Date(d);
+  const day = (x.getDay() + 6) % 7; // Monday = 0
+  x.setHours(0, 0, 0, 0);
+  x.setDate(x.getDate() - day);
+  return x;
+}
+function startOfMonth(d = new Date()) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  x.setDate(1);
+  return x;
+}
+function sameDay(a, b) {
+  return new Date(a).toDateString() === new Date(b).toDateString();
+}
+
+// P&L = current balance - net deposits in the window
+// Per-account, per window (week/month/all)
+function computePnL(account, flows, fromDate) {
+  const accFlows = flows.filter(f => f.accountId === account.id);
+  const windowFlows = fromDate ? accFlows.filter(f => new Date(f.date) >= fromDate) : accFlows;
+  const netDeposits = windowFlows.reduce((s, f) => s + (f.type === 'deposit' ? f.amount : -f.amount), 0);
+  // For "all-time" P&L: balance - lifetime net deposits
+  // For windowed: assume starting baseline at window start, approximated by (balance - lifetime net deposits + flows-outside-window)
+  // Simpler & honest: window P&L = balance change attributable to non-flow activity over window
+  if (!fromDate) {
+    const lifetimeNet = accFlows.reduce((s, f) => s + (f.type === 'deposit' ? f.amount : -f.amount), 0);
+    return { pnl: account.balance - lifetimeNet, netDeposits: lifetimeNet, flowCount: accFlows.length };
+  }
+  const lifetimeNet = accFlows.reduce((s, f) => s + (f.type === 'deposit' ? f.amount : -f.amount), 0);
+  const beforeWindowNet = accFlows.filter(f => new Date(f.date) < fromDate)
+    .reduce((s, f) => s + (f.type === 'deposit' ? f.amount : -f.amount), 0);
+  // P&L in window = (current balance - lifetime net) gives all-time P&L; we don't have historical balances.
+  // Best honest approx: report window flow activity + lifetime P&L since the app can't reconstruct prior balances.
+  return { pnl: account.balance - lifetimeNet, netDeposits, windowDeposits: windowFlows.filter(f => f.type === 'deposit').reduce((s, f) => s + f.amount, 0), windowWithdrawals: windowFlows.filter(f => f.type === 'withdrawal').reduce((s, f) => s + f.amount, 0), flowCount: windowFlows.length, beforeWindowNet };
+}
+
+// Heuristic AI-style auto-routing for brain dumps → suggested destination
+function autoRoute(text) {
+  const t = (text || '').toLowerCase();
+  if (/\b(buy|pick up|grocery|groceries|milk|eggs|bread|bananas|oil|rice|coffee|pasta|cheese|water bottle)\b/.test(t)) return 'grocery';
+  if (/(\$\d|cancel.*subscription|renew|subscription|trial)/.test(t)) return 'subscription';
+  if (/\b(killzone|trade|setup|liquidity|sweep|fvg|ny am|london|asian)\b/.test(t)) return 'killzone';
+  if (/\b(workout|protein|calories|meal|gym|push day|pull day|rep|set)\b/.test(t)) return 'body';
+  return null;
+}
+function autoTag(text) {
+  const t = (text || '').toLowerCase();
+  if (/\b(trade|killzone|liquidity|setup|fvg|broker|wallet)\b/.test(t)) return 'trading';
+  if (/\b(meeting|deploy|deadline|client|sprint|standup|email)\b/.test(t)) return 'work';
+  if (/\b(idea|maybe|what if|concept|prototype)\b/.test(t)) return 'idea';
+  return 'personal';
+}
+
+// Browser notification helpers
+async function ensureNotifPermission() {
+  if (typeof Notification === 'undefined') return 'unsupported';
+  if (Notification.permission === 'granted' || Notification.permission === 'denied') return Notification.permission;
+  try {
+    return await Notification.requestPermission();
+  } catch {
+    return 'denied';
+  }
+}
+function fireNotif(title, body) {
+  try {
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      new Notification(title, { body, silent: false });
+    }
+  } catch {}
+}
+function inQuietHours(now, start, end) {
+  const [sh, sm] = start.split(':').map(Number);
+  const [eh, em] = end.split(':').map(Number);
+  const cur = now.getHours() * 60 + now.getMinutes();
+  const s = sh * 60 + sm;
+  const e = eh * 60 + em;
+  return s < e ? (cur >= s && cur < e) : (cur >= s || cur < e);
 }
 
 async function analyzeTranscript(text) {
@@ -143,6 +249,9 @@ export default function UniversalTracker() {
   const [now, setNow] = useState(new Date());
   const [modal, setModal] = useState(null);
   const [toast, setToast] = useState(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [fabOpen, setFabOpen] = useState(false);
+  const notifFiredRef = useRef(new Set());
 
   useEffect(() => {
     (async () => {
@@ -175,6 +284,82 @@ export default function UniversalTracker() {
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
+
+  // Global Cmd-K / Ctrl-K opens search palette
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setSearchOpen(s => !s);
+      } else if (e.key === 'Escape') {
+        setSearchOpen(false);
+        setFabOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Recurring grocery auto-run: once per week re-add items flagged recurring: 'weekly'
+  useEffect(() => {
+    if (!data?.groceries) return;
+    const last = data.groceries.lastRecurringRun ? new Date(data.groceries.lastRecurringRun) : null;
+    const weekAgo = new Date(Date.now() - 7 * 86400000);
+    if (last && last > weekAgo) return;
+    const recurringTemplates = data.groceries.list.filter(g => g.recurring === 'weekly');
+    if (recurringTemplates.length === 0) {
+      // still bump timestamp to avoid re-checking constantly
+      if (!last) save({ ...data, groceries: { ...data.groceries, lastRecurringRun: new Date().toISOString() } });
+      return;
+    }
+    const newItems = recurringTemplates
+      .filter(t => !data.groceries.list.some(g => !g.completed && g.name.toLowerCase() === t.name.toLowerCase() && g.id !== t.id))
+      .map(t => ({ ...t, id: `g${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, completed: false }));
+    if (newItems.length === 0) {
+      save({ ...data, groceries: { ...data.groceries, lastRecurringRun: new Date().toISOString() } });
+      return;
+    }
+    save({
+      ...data,
+      groceries: {
+        ...data.groceries,
+        list: [...data.groceries.list, ...newItems],
+        lastRecurringRun: new Date().toISOString()
+      }
+    });
+    flash(`${newItems.length} weekly item${newItems.length > 1 ? 's' : ''} re-added`);
+    // eslint-disable-next-line
+  }, [data?.groceries?.lastRecurringRun]);
+
+  // Killzone lead-time browser notifications (respect quiet hours)
+  useEffect(() => {
+    if (!data) return;
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+    if (!data.profile?.notifications?.master) return;
+    const cur = nowMin(now);
+    const quiet = inQuietHours(now, data.profile.notifications.quietStart, data.profile.notifications.quietEnd);
+    if (quiet) return;
+    data.killzones.forEach(kz => {
+      if (!kz.alertOn) return;
+      if (kz.skipUntil && new Date(kz.skipUntil) > new Date()) return;
+      const lead = kz.alertBefore ?? data.profile.notifications.leadTime ?? 15;
+      const dueMin = kz.startMin - lead;
+      const key = `${kz.id}-${new Date().toDateString()}`;
+      if (cur >= dueMin && cur < kz.startMin && !notifFiredRef.current.has(key)) {
+        notifFiredRef.current.add(key);
+        fireNotif(`${kz.name} opens in ${kz.startMin - cur}m`, `${fmtTime(kz.startMin)} – ${fmtTime(kz.endMin)}`);
+      }
+    });
+    // brain-dump reminders fire when reminderAt time has passed and not completed
+    data.braindumps.forEach(b => {
+      if (b.completed || !b.reminderAt) return;
+      const key = `dump-${b.id}`;
+      if (new Date(b.reminderAt) <= now && !notifFiredRef.current.has(key)) {
+        notifFiredRef.current.add(key);
+        fireNotif('Reminder', b.text?.slice(0, 80) || 'Open brain dump');
+      }
+    });
+  }, [now, data]);
 
   const save = async (next) => {
     setData(next);
@@ -222,6 +407,34 @@ export default function UniversalTracker() {
 
         <BottomNav tab={tab} setTab={setTab} />
 
+        {/* Floating universal "+" sits above bottom nav */}
+        <button
+          onClick={() => setFabOpen(true)}
+          className="absolute bottom-20 right-4 w-12 h-12 rounded-full bg-cyan-500 text-zinc-900 shadow-xl shadow-cyan-900/50 flex items-center justify-center hover:bg-cyan-400 transition active:scale-95 z-30"
+          title="Quick add (Ctrl/Cmd-K to search)"
+        >
+          <Plus size={22} strokeWidth={2.5} />
+        </button>
+
+        {fabOpen && (
+          <FabSheet
+            close={() => setFabOpen(false)}
+            onPick={(action) => {
+              setFabOpen(false);
+              if (action === 'search') setSearchOpen(true);
+              else setModal({ type: action });
+            }}
+          />
+        )}
+
+        {searchOpen && (
+          <SearchPalette
+            data={data}
+            close={() => setSearchOpen(false)}
+            jumpTo={(t) => { setTab(t); setSearchOpen(false); }}
+          />
+        )}
+
         {toast && (
           <div className="absolute top-6 left-1/2 -translate-x-1/2 bg-zinc-100 text-zinc-900 px-4 py-2 rounded-full text-xs font-medium shadow-lg z-50">
             {toast}
@@ -231,6 +444,121 @@ export default function UniversalTracker() {
         {modal && (
           <Modal modal={modal} data={data} save={save} close={() => setModal(null)} flash={flash} />
         )}
+      </div>
+    </div>
+  );
+}
+
+/* ─── FAB SHEET (universal +) ──────────────────────────── */
+function FabSheet({ close, onPick }) {
+  const items = [
+    { id: 'brain-add', label: 'Brain dump', icon: Sparkles, color: 'bg-violet-500' },
+    { id: 'grocery-add', label: 'Grocery item', icon: ShoppingCart, color: 'bg-emerald-500' },
+    { id: 'sub-add', label: 'Subscription', icon: CreditCard, color: 'bg-rose-500' },
+    { id: 'kz-journal', label: 'Trade journal', icon: BookOpen, color: 'bg-amber-500' },
+    { id: 'trading-flow', label: 'Deposit / Withdraw', icon: DollarSign, color: 'bg-cyan-500' },
+    { id: 'meal-add', label: 'Log a meal', icon: Apple, color: 'bg-teal-500' },
+    { id: 'search', label: 'Search everything', icon: Search, color: 'bg-zinc-700' }
+  ];
+  return (
+    <div className="absolute inset-0 z-40 bg-black/70 backdrop-blur-sm flex items-end justify-center" onClick={close}>
+      <div onClick={e => e.stopPropagation()} className="w-full bg-zinc-950 ring-1 ring-zinc-800 rounded-t-3xl p-5 pb-7">
+        <div className="w-10 h-1 rounded-full bg-zinc-700 mx-auto mb-4" />
+        <div className="text-xs uppercase tracking-wider text-zinc-500 mb-3">Quick add</div>
+        <div className="grid grid-cols-2 gap-2">
+          {items.map(it => {
+            const Icon = it.icon;
+            return (
+              <button
+                key={it.id}
+                onClick={() => onPick(it.id)}
+                className="flex items-center gap-3 p-3 rounded-xl bg-zinc-900 ring-1 ring-zinc-800 hover:bg-zinc-800 transition text-left"
+              >
+                <div className={`w-9 h-9 rounded-full ${it.color} flex items-center justify-center text-white flex-shrink-0`}>
+                  <Icon size={16} />
+                </div>
+                <span className="text-sm font-medium text-zinc-100">{it.label}</span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="text-[10px] text-zinc-500 text-center mt-4">Tip: press <kbd className="px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 text-[10px]">Ctrl/⌘ K</kbd> to search</div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── SEARCH PALETTE (Cmd/Ctrl-K) ──────────────────────── */
+function SearchPalette({ data, close, jumpTo }) {
+  const [q, setQ] = useState('');
+  const results = (() => {
+    if (!q.trim()) return [];
+    const needle = q.toLowerCase();
+    const out = [];
+    data.braindumps.forEach(b => {
+      const txt = (b.text || b.video?.title || '').toLowerCase();
+      if (txt.includes(needle)) out.push({ kind: 'Brain dump', tab: 'brain', label: b.text || b.video?.title || '(video)', sub: b.tag || '' });
+    });
+    data.subscriptions.forEach(s => {
+      if (s.name.toLowerCase().includes(needle) || s.category?.toLowerCase().includes(needle)) {
+        out.push({ kind: 'Subscription', tab: 'subs', label: s.name, sub: `$${s.cost}/mo · ${s.category}` });
+      }
+    });
+    data.groceries.list.forEach(g => {
+      if (g.name.toLowerCase().includes(needle)) out.push({ kind: 'Grocery', tab: 'grocery', label: g.name, sub: `×${g.qty} · ${g.category}` });
+    });
+    data.groceries.pantry.forEach(p => {
+      if (p.name.toLowerCase().includes(needle)) out.push({ kind: 'Pantry', tab: 'grocery', label: p.name, sub: `${p.qty} ${p.unit}` });
+    });
+    data.killzones.forEach(kz => {
+      if (kz.name.toLowerCase().includes(needle)) out.push({ kind: 'Killzone', tab: 'killzone', label: kz.name, sub: `${fmtTime(kz.startMin)}–${fmtTime(kz.endMin)}` });
+      kz.journal.forEach(j => {
+        if ((j.note || '').toLowerCase().includes(needle)) out.push({ kind: 'Journal', tab: 'killzone', label: j.note, sub: `${kz.name} · ${j.result}` });
+      });
+    });
+    (data.trading?.accounts || []).forEach(a => {
+      if (a.name.toLowerCase().includes(needle)) out.push({ kind: 'Account', tab: 'killzone', label: a.name, sub: `${a.type} · $${a.balance.toLocaleString()}` });
+    });
+    return out.slice(0, 30);
+  })();
+
+  return (
+    <div className="absolute inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-start justify-center pt-12" onClick={close}>
+      <div onClick={e => e.stopPropagation()} className="w-[92%] max-w-md bg-zinc-950 ring-1 ring-zinc-800 rounded-2xl overflow-hidden shadow-2xl">
+        <div className="flex items-center gap-2 p-3 border-b border-zinc-800">
+          <Search size={14} className="text-zinc-500" />
+          <input
+            autoFocus
+            value={q}
+            onChange={e => setQ(e.target.value)}
+            placeholder="Search dumps, subs, grocery, trades…"
+            className="flex-1 bg-transparent outline-none text-sm text-zinc-100 placeholder-zinc-600"
+          />
+          <kbd className="px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 text-[10px]">Esc</kbd>
+        </div>
+        <div className="max-h-[60vh] overflow-y-auto">
+          {q && results.length === 0 && (
+            <div className="text-center py-10 text-zinc-500 text-xs">No matches</div>
+          )}
+          {results.map((r, i) => (
+            <button
+              key={i}
+              onClick={() => jumpTo(r.tab)}
+              className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-zinc-900 text-left border-b border-zinc-900/60 last:border-0"
+            >
+              <div className="min-w-0">
+                <div className="text-sm text-zinc-100 truncate">{r.label}</div>
+                <div className="text-[10px] text-zinc-500">{r.sub}</div>
+              </div>
+              <span className="text-[10px] text-cyan-400 ml-3 flex-shrink-0">{r.kind}</span>
+            </button>
+          ))}
+          {!q && (
+            <div className="px-4 py-6 text-zinc-500 text-xs">
+              Type to search across brain dumps, subscriptions, grocery, pantry, killzones, journal entries, and trading accounts.
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -257,6 +585,7 @@ function DashboardScreen({ data, now, setTab, setModal }) {
   const pendingDumps = data.braindumps.filter(b => !b.completed).length;
   const lowStock = data.groceries.pantry.filter(p => p.qty <= p.lowThreshold);
   const groceryPending = data.groceries.list.filter(g => !g.completed).length;
+  const body = data.body || { macros: { calories: { used: 0, goal: 2400 }, protein: { used: 0, goal: 180 }, carbs: { used: 0, goal: 280 }, fat: { used: 0, goal: 80 }, water: { used: 0, goal: 10 } }, streak: 0, streakFreezes: 0 };
 
   const greeting = now.getHours() < 12 ? 'Good morning' : now.getHours() < 17 ? 'Good afternoon' : 'Good evening';
   const GreetIcon = now.getHours() < 12 ? Coffee : now.getHours() < 17 ? Sun : MoonIcon;
@@ -360,7 +689,7 @@ function DashboardScreen({ data, now, setTab, setModal }) {
             <Flame size={12} className="text-orange-400" />
             <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Streak</span>
           </div>
-          <div className="text-xl font-bold">12 <span className="text-xs font-medium text-zinc-500">days</span></div>
+          <div className="text-xl font-bold">{body.streak} <span className="text-xs font-medium text-zinc-500">days</span></div>
           <div className="text-[11px] text-zinc-500 mt-1.5">Macros on track</div>
         </button>
 
@@ -369,8 +698,8 @@ function DashboardScreen({ data, now, setTab, setModal }) {
             <Dumbbell size={12} className="text-cyan-400" />
             <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Body</span>
           </div>
-          <div className="text-xl font-bold">1840 <span className="text-xs font-medium text-zinc-500">/ 2400</span></div>
-          <div className="text-[11px] text-zinc-500 mt-1.5">Push Day · 6:30 PM</div>
+          <div className="text-xl font-bold tabular-nums">{body.macros.calories.used} <span className="text-xs font-medium text-zinc-500">/ {body.macros.calories.goal}</span></div>
+          <div className="text-[11px] text-zinc-500 mt-1.5">{body.macros.protein.used}g / {body.macros.protein.goal}g protein</div>
         </button>
       </div>
 
@@ -453,12 +782,36 @@ function Countdown({ targetMin, now }) {
 function KillzoneScreen({ data, now, save, setModal, flash }) {
   const cur = nowMin(now);
   const sorted = [...data.killzones].sort((a, b) => a.startMin - b.startMin);
+  const [expandedKz, setExpandedKz] = useState(null);
 
   const toggleAlert = (id) => {
     const next = { ...data, killzones: data.killzones.map(k => k.id === id ? { ...k, alertOn: !k.alertOn } : k) };
     save(next);
     flash('Alert updated');
   };
+
+  const toggleSkipToday = (id) => {
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+    save({
+      ...data,
+      killzones: data.killzones.map(k => {
+        if (k.id !== id) return k;
+        const isSkipping = k.skipUntil && new Date(k.skipUntil) > new Date();
+        return { ...k, skipUntil: isSkipping ? null : endOfDay.toISOString() };
+      })
+    });
+  };
+
+  // 7-day win/loss aggregation by killzone name
+  const weekAgo = new Date(Date.now() - 7 * 86400000);
+  const statsByKz = Object.fromEntries(data.killzones.map(kz => {
+    const recent = kz.journal.filter(j => new Date(j.date) >= weekAgo);
+    const w = recent.filter(j => j.result === 'W').length;
+    const l = recent.filter(j => j.result === 'L').length;
+    const pct = w + l > 0 ? Math.round((w / (w + l)) * 100) : null;
+    return [kz.id, { w, l, pct }];
+  }));
 
   return (
     <div className="px-5 pt-6">
@@ -476,19 +829,28 @@ function KillzoneScreen({ data, now, save, setModal, flash }) {
           const isActive = cur >= kz.startMin && cur < kz.endMin;
           const isPast = cur >= kz.endMin;
           const tu = timeUntil(kz.startMin);
+          const stats = statsByKz[kz.id];
+          const skipping = kz.skipUntil && new Date(kz.skipUntil) > new Date();
+          const isExpanded = expandedKz === kz.id;
           return (
-            <div key={kz.id} className={`rounded-2xl p-4 ring-1 transition ${isActive ? `${c.bg} ${c.ring} ring-2` : 'bg-zinc-900/60 ring-zinc-800'} ${isPast && !isActive ? 'opacity-50' : ''}`}>
+            <div key={kz.id} className={`rounded-2xl p-4 ring-1 transition ${isActive ? `${c.bg} ${c.ring} ring-2` : 'bg-zinc-900/60 ring-zinc-800'} ${(isPast && !isActive) || skipping ? 'opacity-50' : ''}`}>
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <div className={`w-2 h-2 rounded-full ${c.dot} ${isActive ? 'animate-pulse' : ''}`}></div>
                     <span className={`text-sm font-semibold ${isActive ? c.text : 'text-zinc-200'}`}>{kz.name}</span>
                     {isActive && <span className={`text-[10px] font-bold uppercase ${c.text} px-1.5 py-0.5 rounded ${c.bg}`}>Live</span>}
+                    {skipping && <span className="text-[10px] font-bold uppercase text-zinc-400 px-1.5 py-0.5 rounded bg-zinc-800">Skipped today</span>}
+                    {stats?.pct !== null && (
+                      <span className="text-[10px] font-medium text-zinc-400 ml-auto tabular-nums">
+                        7d · <span className="text-emerald-400">{stats.w}W</span>/<span className="text-rose-400">{stats.l}L</span> · {stats.pct}%
+                      </span>
+                    )}
                   </div>
                   <div className="text-zinc-500 text-xs tabular-nums">
                     {fmtTime(kz.startMin)} – {fmtTime(kz.endMin)}
                   </div>
-                  {!isActive && !isPast && (
+                  {!isActive && !isPast && !skipping && (
                     <div className="text-zinc-400 text-xs mt-1.5 tabular-nums">
                       In <span className="text-zinc-200">{tu.h}h {tu.m}m</span>
                     </div>
@@ -503,7 +865,7 @@ function KillzoneScreen({ data, now, save, setModal, flash }) {
                 </button>
               </div>
               {kz.alertOn && (
-                <div className="mt-3 flex items-center gap-2">
+                <div className="mt-3 flex items-center gap-2 flex-wrap">
                   <span className="text-[10px] uppercase tracking-wider text-zinc-500">Alert</span>
                   <div className="flex gap-1">
                     {[5, 15, 30].map(m => (
@@ -516,12 +878,43 @@ function KillzoneScreen({ data, now, save, setModal, flash }) {
                       </button>
                     ))}
                   </div>
+                  <button
+                    onClick={() => toggleSkipToday(kz.id)}
+                    className={`text-[11px] px-2 py-0.5 rounded-full ml-auto ${skipping ? 'bg-zinc-700 text-zinc-200' : 'bg-zinc-800/50 text-zinc-500 hover:text-zinc-300'}`}
+                  >
+                    {skipping ? 'Un-skip' : 'Skip today'}
+                  </button>
+                  <button
+                    onClick={() => setExpandedKz(isExpanded ? null : kz.id)}
+                    className="text-[11px] px-2 py-0.5 rounded-full bg-zinc-800/50 text-zinc-400 hover:text-zinc-200 flex items-center gap-0.5"
+                  >
+                    <ListChecks size={10} /> {(kz.checklist || []).length}
+                    {isExpanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+                  </button>
+                </div>
+              )}
+              {isExpanded && (
+                <div className="mt-3 pt-3 border-t border-zinc-800/60">
+                  <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">Pre-session checklist</div>
+                  <div className="space-y-1.5">
+                    {(kz.checklist || []).map((item, i) => (
+                      <div key={i} className="flex items-center gap-2 text-xs text-zinc-300">
+                        <span className={`w-1 h-1 rounded-full ${c.dot}`} />
+                        <span>{item}</span>
+                      </div>
+                    ))}
+                    {(kz.checklist || []).length === 0 && (
+                      <div className="text-[11px] text-zinc-600">No items. Edit in Profile (coming soon).</div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
           );
         })}
       </div>
+
+      <TradingPnLSection data={data} save={save} setModal={setModal} flash={flash} />
 
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
@@ -558,16 +951,226 @@ function KillzoneScreen({ data, now, save, setModal, flash }) {
   );
 }
 
+/* ─── TRADING P&L ───────────────────────────────────────── */
+function TradingPnLSection({ data, save, setModal, flash }) {
+  const trading = data.trading || { accounts: [], flows: [] };
+  const [window, setWindow] = useState('month'); // week | month | all
+  const [openAcc, setOpenAcc] = useState(null);
+
+  const fromDate = window === 'week' ? startOfWeek() : window === 'month' ? startOfMonth() : null;
+
+  const perAccount = trading.accounts.map(acc => {
+    const stats = computePnL(acc, trading.flows, fromDate);
+    return { acc, ...stats };
+  });
+
+  const totals = perAccount.reduce((s, x) => ({
+    balance: s.balance + x.acc.balance,
+    pnl: s.pnl + x.pnl,
+    deposits: s.deposits + (x.windowDeposits ?? (x.netDeposits > 0 ? x.netDeposits : 0)),
+    withdrawals: s.withdrawals + (x.windowWithdrawals ?? 0)
+  }), { balance: 0, pnl: 0, deposits: 0, withdrawals: 0 });
+
+  const updateBalance = (id, val) => {
+    const num = parseFloat(val);
+    if (isNaN(num)) return;
+    save({
+      ...data,
+      trading: {
+        ...trading,
+        accounts: trading.accounts.map(a => a.id === id ? { ...a, balance: num } : a)
+      }
+    });
+  };
+
+  const removeFlow = (id) => {
+    save({ ...data, trading: { ...trading, flows: trading.flows.filter(f => f.id !== id) } });
+    flash('Flow removed');
+  };
+
+  const removeAccount = (id) => {
+    if (!confirm('Remove this account and all its flows?')) return;
+    save({
+      ...data,
+      trading: {
+        ...trading,
+        accounts: trading.accounts.filter(a => a.id !== id),
+        flows: trading.flows.filter(f => f.accountId !== id)
+      }
+    });
+    flash('Account removed');
+  };
+
+  return (
+    <div className="mb-6">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+          <DollarSign size={12} /> P&L
+        </h2>
+        <div className="flex gap-1">
+          <button onClick={() => setModal({ type: 'trading-account' })} className="text-[11px] px-2 py-1 rounded-full bg-zinc-900 ring-1 ring-zinc-800 text-zinc-400 hover:text-zinc-200">+ Account</button>
+          <button onClick={() => setModal({ type: 'trading-flow' })} className="text-[11px] px-2 py-1 rounded-full bg-cyan-500/10 ring-1 ring-cyan-500/30 text-cyan-300">+ Flow</button>
+        </div>
+      </div>
+
+      <div className="rounded-2xl bg-gradient-to-br from-emerald-600/15 via-emerald-600/5 to-transparent ring-1 ring-emerald-500/20 p-4 mb-3">
+        <div className="flex gap-1 mb-3">
+          {[
+            { id: 'week', label: 'This week' },
+            { id: 'month', label: 'This month' },
+            { id: 'all', label: 'All time' }
+          ].map(o => (
+            <button
+              key={o.id}
+              onClick={() => setWindow(o.id)}
+              className={`text-[11px] px-2.5 py-1 rounded-full transition ${window === o.id ? 'bg-emerald-500/30 text-emerald-200 ring-1 ring-emerald-500/40' : 'bg-zinc-900/40 text-zinc-400 ring-1 ring-zinc-800'}`}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-zinc-500">Total balance</div>
+            <div className="text-2xl font-bold tabular-nums">${totals.balance.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
+          </div>
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-zinc-500">All-time P&L</div>
+            <div className={`text-2xl font-bold tabular-nums ${totals.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+              {totals.pnl >= 0 ? '+' : ''}${totals.pnl.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            </div>
+          </div>
+        </div>
+        {window !== 'all' && (
+          <div className="flex items-center gap-3 mt-3 pt-3 border-t border-emerald-500/10 text-[11px]">
+            <span className="text-zinc-400 flex items-center gap-1">
+              <ArrowDownCircle size={11} className="text-emerald-400" />
+              Deposited <span className="text-zinc-200 tabular-nums">${totals.deposits.toLocaleString()}</span>
+            </span>
+            <span className="text-zinc-400 flex items-center gap-1">
+              <ArrowUpCircle size={11} className="text-rose-400" />
+              Withdrew <span className="text-zinc-200 tabular-nums">${totals.withdrawals.toLocaleString()}</span>
+            </span>
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        {perAccount.length === 0 && (
+          <div className="text-center py-8 text-zinc-500 text-xs">No accounts yet. Tap “+ Account”.</div>
+        )}
+        {perAccount.map(({ acc, pnl, netDeposits }) => {
+          const isExpanded = openAcc === acc.id;
+          const accFlows = trading.flows.filter(f => f.accountId === acc.id)
+            .filter(f => !fromDate || new Date(f.date) >= fromDate)
+            .sort((a, b) => new Date(b.date) - new Date(a.date));
+          const pos = pnl >= 0;
+          return (
+            <div key={acc.id} className="rounded-xl bg-zinc-900/60 ring-1 ring-zinc-800 overflow-hidden">
+              <button
+                onClick={() => setOpenAcc(isExpanded ? null : acc.id)}
+                className="w-full p-3.5 flex items-center justify-between hover:bg-zinc-900 transition text-left"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold truncate">{acc.name}</span>
+                    <span className="text-[10px] uppercase tracking-wider text-zinc-500 px-1.5 py-0.5 rounded bg-zinc-800/60">{acc.type}</span>
+                  </div>
+                  <div className="text-[11px] text-zinc-500 mt-0.5 tabular-nums">
+                    Balance <span className="text-zinc-300">${acc.balance.toLocaleString()}</span> · Net in <span className="text-zinc-300">${netDeposits.toLocaleString()}</span>
+                  </div>
+                </div>
+                <div className="text-right ml-3">
+                  <div className={`text-sm font-bold tabular-nums ${pos ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    {pos ? '+' : ''}${pnl.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  </div>
+                  <div className="text-[10px] text-zinc-500">all-time P&L</div>
+                </div>
+                {isExpanded ? <ChevronUp size={14} className="ml-2 text-zinc-500" /> : <ChevronDown size={14} className="ml-2 text-zinc-500" />}
+              </button>
+              {isExpanded && (
+                <div className="border-t border-zinc-800 p-3.5 bg-zinc-950/40 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <label className="text-[10px] uppercase tracking-wider text-zinc-500 flex-shrink-0">Update balance</label>
+                    <input
+                      type="number"
+                      defaultValue={acc.balance}
+                      onBlur={(e) => updateBalance(acc.id, e.target.value)}
+                      className="flex-1 bg-zinc-900 ring-1 ring-zinc-800 rounded-lg px-2.5 py-1 text-xs text-zinc-100 focus:ring-cyan-500 outline-none tabular-nums"
+                    />
+                    <button onClick={() => removeAccount(acc.id)} className="text-zinc-600 hover:text-rose-400">
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">
+                      Flows {window !== 'all' ? `(${window})` : ''}
+                    </div>
+                    {accFlows.length === 0 && (
+                      <div className="text-[11px] text-zinc-600">No flows in this window.</div>
+                    )}
+                    <div className="space-y-1.5">
+                      {accFlows.map(f => (
+                        <div key={f.id} className="flex items-center gap-2 text-xs">
+                          {f.type === 'deposit'
+                            ? <ArrowDownCircle size={12} className="text-emerald-400 flex-shrink-0" />
+                            : <ArrowUpCircle size={12} className="text-rose-400 flex-shrink-0" />}
+                          <span className="flex-1 truncate text-zinc-300">{f.note || (f.type === 'deposit' ? 'Deposit' : 'Withdrawal')}</span>
+                          <span className={`tabular-nums font-medium ${f.type === 'deposit' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                            {f.type === 'deposit' ? '+' : '−'}${f.amount.toLocaleString()}
+                          </span>
+                          <span className="text-[10px] text-zinc-500 tabular-nums">{new Date(f.date).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
+                          <button onClick={() => removeFlow(f.id)} className="text-zinc-600 hover:text-rose-400">
+                            <X size={11} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-[10px] text-zinc-600 mt-2 leading-relaxed">
+        P&L = current balance − net deposits. Update balances after each session to track non-flow gains/losses per broker or wallet.
+      </p>
+    </div>
+  );
+}
+
 /* ─── SUBSCRIPTIONS ─────────────────────────────────────── */
 function SubsScreen({ data, save, setModal, flash }) {
   const monthly = data.subscriptions.reduce((s, x) => s + x.cost, 0);
+  const annual = monthly * 12;
   const apis = data.subscriptions.filter(s => s.type === 'api');
   const subs = data.subscriptions.filter(s => s.type === 'subscription');
+
+  // Aggregate by category
+  const byCat = data.subscriptions.reduce((m, s) => {
+    m[s.category || 'Other'] = (m[s.category || 'Other'] || 0) + s.cost;
+    return m;
+  }, {});
+  const catEntries = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
 
   const remove = (id) => {
     save({ ...data, subscriptions: data.subscriptions.filter(s => s.id !== id) });
     flash('Removed');
   };
+
+  const toggleUsed = (id) => {
+    save({
+      ...data,
+      subscriptions: data.subscriptions.map(s => {
+        if (s.id !== id) return s;
+        const next = !s.usedThisMonth;
+        return { ...s, usedThisMonth: next, lastUsedReset: next ? new Date().toISOString() : s.lastUsedReset };
+      })
+    });
+  };
+
+  const daysSinceUsed = (s) => s.lastUsedReset ? Math.floor((Date.now() - new Date(s.lastUsedReset).getTime()) / 86400000) : null;
 
   return (
     <div className="px-5 pt-6">
@@ -579,11 +1182,38 @@ function SubsScreen({ data, save, setModal, flash }) {
       </div>
       <p className="text-zinc-500 text-sm mb-5">Subscriptions & API burn</p>
 
-      <div className="rounded-2xl bg-gradient-to-br from-rose-600/30 via-rose-500/10 to-transparent ring-1 ring-rose-500/20 p-5 mb-5">
+      <div className="rounded-2xl bg-gradient-to-br from-rose-600/30 via-rose-500/10 to-transparent ring-1 ring-rose-500/20 p-5 mb-3">
         <div className="text-xs font-semibold uppercase tracking-wider text-rose-300 mb-1">Monthly total</div>
         <div className="text-3xl font-bold tabular-nums">${monthly.toFixed(2)}</div>
-        <div className="text-zinc-400 text-xs mt-1">{data.subscriptions.length} active · {apis.length} API</div>
+        <div className="text-zinc-400 text-xs mt-1 flex items-center gap-2 flex-wrap">
+          <span>{data.subscriptions.length} active · {apis.length} API</span>
+          <span className="text-zinc-500">·</span>
+          <span>~ <span className="text-zinc-300 tabular-nums">${annual.toFixed(0)}</span>/yr</span>
+        </div>
       </div>
+
+      {/* Per-category breakdown */}
+      {catEntries.length > 0 && (
+        <div className="rounded-2xl bg-zinc-900/60 ring-1 ring-zinc-800 p-4 mb-5">
+          <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-3">By category</div>
+          <div className="space-y-2">
+            {catEntries.map(([cat, total]) => {
+              const pct = (total / monthly) * 100;
+              return (
+                <div key={cat}>
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span className="text-zinc-300">{cat}</span>
+                    <span className="tabular-nums text-zinc-400">${total.toFixed(2)} <span className="text-zinc-600">· {pct.toFixed(0)}%</span></span>
+                  </div>
+                  <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
+                    <div className="h-full bg-rose-400 rounded-full" style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {apis.length > 0 && (
         <div className="mb-6">
@@ -639,23 +1269,40 @@ function SubsScreen({ data, save, setModal, flash }) {
         <div className="space-y-2">
           {subs.map(s => {
             const d = daysUntil(s.nextRenewal);
+            const idle = daysSinceUsed(s);
+            const dormant = !s.usedThisMonth && idle !== null && idle >= 30;
             return (
-              <div key={s.id} className="rounded-xl bg-zinc-900/60 ring-1 ring-zinc-800 p-3.5 flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="font-medium text-sm">{s.name}</span>
-                    {d <= 3 && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400">{d === 0 ? 'TODAY' : d === 1 ? 'TOMORROW' : `${d}D`}</span>}
+              <div key={s.id} className="rounded-xl bg-zinc-900/60 ring-1 ring-zinc-800 p-3.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                      <span className="font-medium text-sm">{s.name}</span>
+                      {d <= 3 && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400">{d === 0 ? 'TODAY' : d === 1 ? 'TOMORROW' : `${d}D`}</span>}
+                      {dormant && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-400">CONSIDER CANCEL</span>}
+                    </div>
+                    <div className="text-[11px] text-zinc-500">{s.category} · monthly · ${(s.cost * 12).toFixed(0)}/yr</div>
                   </div>
-                  <div className="text-[11px] text-zinc-500">{s.category} · monthly</div>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <div className="text-sm font-semibold tabular-nums">${s.cost.toFixed(2)}</div>
+                      <div className="text-[10px] text-zinc-500">{d}d</div>
+                    </div>
+                    <button onClick={() => remove(s.id)} className="text-zinc-600 hover:text-rose-400 transition">
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-right">
-                    <div className="text-sm font-semibold tabular-nums">${s.cost.toFixed(2)}</div>
-                    <div className="text-[10px] text-zinc-500">{d}d</div>
-                  </div>
-                  <button onClick={() => remove(s.id)} className="text-zinc-600 hover:text-rose-400 transition">
-                    <Trash2 size={13} />
+                <div className="flex items-center gap-2 mt-2 pt-2 border-t border-zinc-800/60">
+                  <span className="text-[10px] uppercase tracking-wider text-zinc-500">Used this month?</span>
+                  <button
+                    onClick={() => toggleUsed(s.id)}
+                    className={`text-[11px] px-2 py-0.5 rounded-full ${s.usedThisMonth ? 'bg-emerald-500/20 text-emerald-400' : 'bg-zinc-800 text-zinc-400'}`}
+                  >
+                    {s.usedThisMonth ? 'Yes' : 'Not yet'}
                   </button>
+                  {idle !== null && (
+                    <span className="text-[10px] text-zinc-600 ml-auto">last used {idle}d ago</span>
+                  )}
                 </div>
               </div>
             );
@@ -682,6 +1329,27 @@ function BrainScreen({ data, save, setModal, flash }) {
   const remove = (id) => {
     save({ ...data, braindumps: data.braindumps.filter(b => b.id !== id) });
     flash('Deleted');
+  };
+
+  // Move a dump to its suggested destination (currently: grocery list)
+  const moveDump = (item, dest) => {
+    if (dest === 'grocery') {
+      const groceryItem = {
+        id: `g${Date.now()}`,
+        name: item.text.replace(/^(buy|pick up|get)\s+/i, '').trim().slice(0, 40),
+        qty: 1,
+        category: 'Other',
+        addedBy: 'You',
+        completed: false,
+        recurring: null
+      };
+      save({
+        ...data,
+        braindumps: data.braindumps.map(b => b.id === item.id ? { ...b, completed: true } : b),
+        groceries: { ...data.groceries, list: [...data.groceries.list, groceryItem] }
+      });
+      flash('Moved to grocery list');
+    }
   };
 
   const saveVideoEntry = async (entry) => {
@@ -753,6 +1421,7 @@ function BrainScreen({ data, save, setModal, flash }) {
             onToggleExpand={() => setExpanded(expanded === b.id ? null : b.id)}
             onToggle={() => toggle(b.id)}
             onRemove={() => remove(b.id)}
+            onMove={(dest) => moveDump(b, dest)}
           />
         ))}
         {items.length === 0 && (
@@ -769,7 +1438,7 @@ function BrainScreen({ data, save, setModal, flash }) {
   );
 }
 
-function BrainItem({ item, expanded, onToggleExpand, onToggle, onRemove }) {
+function BrainItem({ item, expanded, onToggleExpand, onToggle, onRemove, onMove }) {
   const tagColor = (t) => ({
     personal: 'bg-pink-500/15 text-pink-400',
     trading: 'bg-amber-500/15 text-amber-400',
@@ -887,6 +1556,28 @@ function BrainItem({ item, expanded, onToggleExpand, onToggle, onRemove }) {
               <Bell size={9} /> {new Date(item.reminderAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
             </span>
           )}
+          {!item.completed && (() => {
+            const dest = autoRoute(item.text);
+            if (dest === 'grocery' && onMove) {
+              return (
+                <button
+                  onClick={() => onMove('grocery')}
+                  className="text-[10px] bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 px-1.5 py-0.5 rounded flex items-center gap-1 ring-1 ring-emerald-500/30"
+                  title="Auto-detected: looks like a grocery item"
+                >
+                  <Sparkles size={9} /> Move to Grocery <ArrowRight size={9} />
+                </button>
+              );
+            }
+            if (dest && dest !== 'grocery') {
+              return (
+                <span className="text-[10px] bg-zinc-800/60 text-zinc-400 px-1.5 py-0.5 rounded flex items-center gap-1">
+                  <Sparkles size={9} /> looks like · {dest}
+                </span>
+              );
+            }
+            return null;
+          })()}
           <span className="text-[10px] text-zinc-500">{new Date(item.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
         </div>
       </div>
@@ -1345,6 +2036,46 @@ function GroceryScreen({ data, save, setModal, flash }) {
     save({ ...data, groceries: { ...data.groceries, pantry: pantry.map(p => p.id === id ? { ...p, qty: Math.max(0, p.qty + delta) } : p) } });
   };
 
+  const addPantryToList = (p) => {
+    const already = list.some(g => !g.completed && g.name.toLowerCase() === p.name.toLowerCase());
+    if (already) {
+      flash('Already on list');
+      return;
+    }
+    save({
+      ...data,
+      groceries: {
+        ...data.groceries,
+        list: [...list, { id: `g${Date.now()}`, name: p.name, qty: Math.max(1, (p.lowThreshold || 1) + 1 - p.qty), category: 'Pantry', addedBy: 'You', completed: false, recurring: null }]
+      }
+    });
+    flash(`${p.name} added to list`);
+  };
+
+  const toggleRecurring = (id) => {
+    save({
+      ...data,
+      groceries: {
+        ...data.groceries,
+        list: list.map(g => g.id === id ? { ...g, recurring: g.recurring === 'weekly' ? null : 'weekly' } : g)
+      }
+    });
+  };
+
+  const cycleMember = (id) => {
+    save({
+      ...data,
+      groceries: {
+        ...data.groceries,
+        list: list.map(g => {
+          if (g.id !== id) return g;
+          const idx = members.indexOf(g.addedBy);
+          return { ...g, addedBy: members[(idx + 1) % members.length] };
+        })
+      }
+    });
+  };
+
   const pending = list.filter(g => !g.completed);
   const done = list.filter(g => g.completed);
   const lowStock = pantry.filter(p => p.qty <= p.lowThreshold);
@@ -1388,20 +2119,43 @@ function GroceryScreen({ data, save, setModal, flash }) {
 
       {view === 'list' && (
         <>
-          <div className="space-y-2 mb-5">
-            {pending.map(g => (
-              <div key={g.id} className="rounded-xl bg-zinc-900/60 ring-1 ring-zinc-800 p-3.5 flex items-center gap-3">
-                <button onClick={() => toggleItem(g.id)} className="w-5 h-5 rounded-full ring-1 ring-zinc-600 hover:ring-emerald-400 transition flex-shrink-0"></button>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium">{g.name}</div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-[10px] text-zinc-500">×{g.qty} · {g.category}</span>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${memberColor(g.addedBy)}`}>{g.addedBy}</span>
-                  </div>
+          <div className="space-y-4 mb-5">
+            {Object.entries(pending.reduce((acc, g) => {
+              const cat = g.category || 'Other';
+              (acc[cat] = acc[cat] || []).push(g);
+              return acc;
+            }, {})).sort((a, b) => a[0].localeCompare(b[0])).map(([cat, items]) => (
+              <div key={cat}>
+                <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5 px-1">{cat}</div>
+                <div className="space-y-2">
+                  {items.map(g => (
+                    <div key={g.id} className="rounded-xl bg-zinc-900/60 ring-1 ring-zinc-800 p-3.5 flex items-center gap-3">
+                      <button onClick={() => toggleItem(g.id)} className="w-5 h-5 rounded-full ring-1 ring-zinc-600 hover:ring-emerald-400 transition flex-shrink-0"></button>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-medium">{g.name}</span>
+                          {g.recurring === 'weekly' && (
+                            <span className="text-[9px] bg-violet-500/15 text-violet-300 px-1 py-0.5 rounded flex items-center gap-0.5" title="Auto-re-adds every week">
+                              <Repeat size={8} /> wk
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] text-zinc-500">×{g.qty}</span>
+                          <button onClick={() => cycleMember(g.id)} className={`text-[10px] px-1.5 py-0.5 rounded ${memberColor(g.addedBy)}`} title="Tap to reassign">
+                            {g.addedBy}
+                          </button>
+                          <button onClick={() => toggleRecurring(g.id)} className="text-[10px] text-zinc-500 hover:text-violet-300" title="Toggle weekly recurring">
+                            <Repeat size={10} />
+                          </button>
+                        </div>
+                      </div>
+                      <button onClick={() => removeItem(g.id)} className="text-zinc-600 hover:text-rose-400">
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  ))}
                 </div>
-                <button onClick={() => removeItem(g.id)} className="text-zinc-600 hover:text-rose-400">
-                  <Trash2 size={13} />
-                </button>
               </div>
             ))}
             {pending.length === 0 && (
@@ -1433,15 +2187,25 @@ function GroceryScreen({ data, save, setModal, flash }) {
         <div className="space-y-2">
           {pantry.sort((a, b) => a.qty - b.qty).map(p => {
             const low = p.qty <= p.lowThreshold;
+            const onList = list.some(g => !g.completed && g.name.toLowerCase() === p.name.toLowerCase());
             return (
-              <div key={p.id} className={`rounded-xl ring-1 p-3.5 flex items-center justify-between ${low ? 'bg-amber-500/5 ring-amber-500/20' : 'bg-zinc-900/60 ring-zinc-800'}`}>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
+              <div key={p.id} className={`rounded-xl ring-1 p-3.5 flex items-center justify-between gap-2 ${low ? 'bg-amber-500/5 ring-amber-500/20' : 'bg-zinc-900/60 ring-zinc-800'}`}>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-medium">{p.name}</span>
                     {low && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400">{p.qty === 0 ? 'OUT' : 'LOW'}</span>}
                   </div>
                   <div className="text-[11px] text-zinc-500 mt-0.5 tabular-nums">{p.qty} {p.unit} · alert at {p.lowThreshold}</div>
                 </div>
+                {low && (
+                  <button
+                    onClick={() => addPantryToList(p)}
+                    disabled={onList}
+                    className={`text-[10px] px-2 py-1 rounded-full ring-1 flex items-center gap-1 ${onList ? 'bg-zinc-800 text-zinc-500 ring-zinc-700 cursor-not-allowed' : 'bg-emerald-500/15 text-emerald-300 ring-emerald-500/30 hover:bg-emerald-500/25'}`}
+                  >
+                    {onList ? <Check size={10} /> : <Plus size={10} />} {onList ? 'on list' : 'add'}
+                  </button>
+                )}
                 <div className="flex items-center gap-1">
                   <button onClick={() => adjustPantry(p.id, -1)} className="w-7 h-7 rounded-lg bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center text-zinc-300">−</button>
                   <span className="w-7 text-center text-sm font-semibold tabular-nums">{p.qty}</span>
@@ -1458,9 +2222,9 @@ function GroceryScreen({ data, save, setModal, flash }) {
 
 /* ─── BODY (Fitness + Diet) ────────────────────────────── */
 function BodyScreen({ data, now, save, setModal, flash }) {
-  // Sample data — wire into `data.body` later
-  const macros = { calories: { used: 1840, goal: 2400 }, protein: { used: 142, goal: 180 }, water: { used: 6, goal: 10 } };
-  const streak = 12;
+  const body = data.body || { macros: { calories: { used: 0, goal: 2400 }, protein: { used: 0, goal: 180 }, carbs: { used: 0, goal: 280 }, fat: { used: 0, goal: 80 }, water: { used: 0, goal: 10 } }, streak: 0, streakFreezes: 0 };
+  const macros = body.macros;
+  const streak = body.streak;
   const nextWorkout = { name: 'Push Day', time: '6:30 PM', in: '2h 15m', focus: 'Chest · Shoulders · Triceps' };
   const weekWorkouts = [
     { day: 'Mon', name: 'Pull', done: true, vol: '12,400 lbs' },
@@ -1475,9 +2239,21 @@ function BodyScreen({ data, now, save, setModal, flash }) {
     { id: 'm3', name: 'Whey shake', kcal: 180, p: 30, time: '3:20 PM', tag: 'snack' },
   ];
 
-  const calPct = Math.round((macros.calories.used / macros.calories.goal) * 100);
-  const proPct = Math.round((macros.protein.used / macros.protein.goal) * 100);
-  const waterPct = Math.round((macros.water.used / macros.water.goal) * 100);
+  const pct = (m) => Math.round((m.used / m.goal) * 100);
+
+  const addWater = () => {
+    save({
+      ...data,
+      body: { ...body, macros: { ...macros, water: { ...macros.water, used: Math.min(macros.water.goal + 4, macros.water.used + 1) } } }
+    });
+    flash('+1 cup');
+  };
+
+  const useFreeze = () => {
+    if (body.streakFreezes <= 0) return;
+    save({ ...data, body: { ...body, streakFreezes: body.streakFreezes - 1 } });
+    flash('Freeze used · streak protected');
+  };
 
   return (
     <div className="px-5 pt-6 pb-4">
@@ -1495,7 +2271,7 @@ function BodyScreen({ data, now, save, setModal, flash }) {
         </button>
       </div>
 
-      {/* Streak banner */}
+      {/* Streak banner with freeze */}
       <div className="rounded-2xl bg-gradient-to-br from-orange-500/20 via-rose-500/5 to-transparent ring-1 ring-orange-500/30 p-4 mb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -1507,7 +2283,14 @@ function BodyScreen({ data, now, save, setModal, flash }) {
               <div className="text-zinc-400 text-xs">Hit calorie + protein 4 days running</div>
             </div>
           </div>
-          <TrendingUp size={18} className="text-orange-400" />
+          <button
+            onClick={useFreeze}
+            disabled={body.streakFreezes <= 0}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-medium ring-1 ${body.streakFreezes > 0 ? 'bg-sky-500/15 text-sky-300 ring-sky-500/30 hover:bg-sky-500/25' : 'bg-zinc-800 text-zinc-600 ring-zinc-700 cursor-not-allowed'}`}
+            title="Use a streak freeze (1 per week)"
+          >
+            <Snowflake size={11} /> {body.streakFreezes}
+          </button>
         </div>
       </div>
 
@@ -1527,14 +2310,44 @@ function BodyScreen({ data, now, save, setModal, flash }) {
         </div>
       </button>
 
-      {/* Macro stats grid */}
-      <div className="grid grid-cols-3 gap-3 mb-4">
-        <MacroCard icon={Flame} iconColor="text-orange-400" label="Calories" used={macros.calories.used} goal={macros.calories.goal} unit="kcal" pct={calPct} barColor="bg-orange-400" />
-        <MacroCard icon={Activity} iconColor="text-emerald-400" label="Protein" used={macros.protein.used} goal={macros.protein.goal} unit="g" pct={proPct} barColor="bg-emerald-400" />
-        <MacroCard icon={Droplet} iconColor="text-sky-400" label="Water" used={macros.water.used} goal={macros.water.goal} unit="cups" pct={waterPct} barColor="bg-sky-400" />
+      {/* Macro stats — calories full row, P/C/F + Water grid */}
+      <div className="rounded-2xl bg-zinc-900/80 ring-1 ring-zinc-800 p-4 mb-3">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-1.5">
+            <Flame size={12} className="text-orange-400" />
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Calories</span>
+          </div>
+          <span className="text-[11px] text-zinc-500 tabular-nums">{macros.calories.used} / {macros.calories.goal} kcal</span>
+        </div>
+        <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+          <div className="h-full bg-orange-400" style={{ width: `${Math.min(100, pct(macros.calories))}%` }} />
+        </div>
       </div>
 
-      {/* Quick log */}
+      <div className="grid grid-cols-3 gap-2 mb-3">
+        <MacroCard icon={Activity} iconColor="text-emerald-400" label="Protein" used={macros.protein.used} goal={macros.protein.goal} unit="g" pct={pct(macros.protein)} barColor="bg-emerald-400" />
+        <MacroCard icon={Zap} iconColor="text-amber-400" label="Carbs" used={macros.carbs?.used ?? 0} goal={macros.carbs?.goal ?? 280} unit="g" pct={pct(macros.carbs ?? { used: 0, goal: 1 })} barColor="bg-amber-400" />
+        <MacroCard icon={Droplet} iconColor="text-rose-300" label="Fat" used={macros.fat?.used ?? 0} goal={macros.fat?.goal ?? 80} unit="g" pct={pct(macros.fat ?? { used: 0, goal: 1 })} barColor="bg-rose-300" />
+      </div>
+
+      {/* Water with quick log */}
+      <div className="rounded-2xl bg-zinc-900/80 ring-1 ring-zinc-800 p-4 mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <Droplet size={14} className="text-sky-400" />
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-zinc-500">Water</div>
+            <div className="text-sm font-semibold tabular-nums">{macros.water.used} / {macros.water.goal} cups</div>
+          </div>
+        </div>
+        <button
+          onClick={addWater}
+          className="bg-sky-500/15 text-sky-300 hover:bg-sky-500/25 ring-1 ring-sky-500/30 px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1"
+        >
+          <Plus size={12} /> Cup
+        </button>
+      </div>
+
+      {/* Quick log meal */}
       <button
         onClick={() => setModal({ type: 'meal-add' })}
         className="w-full rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 p-4 text-left shadow-lg shadow-emerald-900/30 mb-4 active:scale-[0.98] transition"
@@ -1550,6 +2363,20 @@ function BodyScreen({ data, now, save, setModal, flash }) {
           <Plus size={20} />
         </div>
       </button>
+
+      {/* Sleep + RPE */}
+      {body.lastSleep && (
+        <div className="rounded-2xl bg-zinc-900/80 ring-1 ring-zinc-800 p-4 mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Moon size={14} className="text-violet-400" />
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-zinc-500">Recovery</div>
+              <div className="text-sm font-semibold tabular-nums">{body.lastSleep.hours}h sleep · RPE {body.lastSleep.rpe}</div>
+            </div>
+          </div>
+          <span className="text-[10px] text-zinc-500">{new Date(body.lastSleep.date).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
+        </div>
+      )}
 
       {/* This week */}
       <div className="rounded-2xl bg-zinc-900/80 ring-1 ring-zinc-800 p-4 mb-4">
@@ -1803,6 +2630,21 @@ function ProfileScreen({ data, save, flash }) {
               <TimeInput value={p.notifications.quietEnd} onChange={(v) => setNotif({ quietEnd: v })} />
             </div>
           </div>
+
+          <div className={`p-4 ${p.notifications.master ? '' : 'opacity-40 pointer-events-none'}`}>
+            <div className="text-[11px] uppercase tracking-wider text-zinc-500 mb-2">Browser notifications</div>
+            <button
+              onClick={async () => {
+                const res = await ensureNotifPermission();
+                setNotif({ browserPermission: res });
+                flash(res === 'granted' ? 'Notifications enabled' : res === 'denied' ? 'Permission denied' : 'Not supported');
+              }}
+              className={`text-xs px-3 py-2 rounded-lg w-full font-medium transition ${p.notifications.browserPermission === 'granted' ? 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30' : 'bg-cyan-500/15 text-cyan-300 ring-1 ring-cyan-500/30 hover:bg-cyan-500/25'}`}
+            >
+              {p.notifications.browserPermission === 'granted' ? '✓ Notifications enabled' : 'Enable browser notifications'}
+            </button>
+            <p className="text-[10px] text-zinc-500 mt-1.5 leading-relaxed">Fires lead-time alerts for killzones and brain-dump reminders, respecting quiet hours.</p>
+          </div>
         </div>
       </Section>
 
@@ -1888,7 +2730,13 @@ function TimeInput({ value, onChange }) {
 
 /* ─── MODAL ────────────────────────────────────────────── */
 function Modal({ modal, data, save, close, flash }) {
-  const [form, setForm] = useState({});
+  const [form, setForm] = useState(() => {
+    // Preset values from modal.* (e.g. journal preset kz)
+    const f = {};
+    if (modal.presetKzId) f.kzId = modal.presetKzId;
+    if (modal.presetAccountId) f.accountId = modal.presetAccountId;
+    return f;
+  });
   const [voiceRecording, setVoiceRecording] = useState(false);
   const [voiceInterim, setVoiceInterim] = useState('');
   const voiceRecognitionRef = useRef(null);
@@ -1951,15 +2799,16 @@ function Modal({ modal, data, save, close, flash }) {
     let next = { ...data };
     if (modal.type === 'brain-add') {
       if (!form.text?.trim()) return;
-      next.braindumps = [{ id: `b${Date.now()}`, type: 'text', text: form.text, createdAt: new Date().toISOString(), reminderAt: form.reminderAt || null, completed: false, tag: form.tag || null }, ...data.braindumps];
+      const tag = form.tag || autoTag(form.text);
+      next.braindumps = [{ id: `b${Date.now()}`, type: 'text', text: form.text, createdAt: new Date().toISOString(), reminderAt: form.reminderAt || null, completed: false, tag }, ...data.braindumps];
       flash('Captured ✨');
     } else if (modal.type === 'sub-add') {
       if (!form.name?.trim() || !form.cost) return;
-      next.subscriptions = [...data.subscriptions, { id: `s${Date.now()}`, name: form.name, cost: parseFloat(form.cost), cycle: 'monthly', nextRenewal: todayPlus(parseInt(form.days || 30)), type: form.type || 'subscription', category: form.category || 'Other', apiCap: form.type === 'api' ? parseFloat(form.cost) : undefined, apiUsed: 0 }];
+      next.subscriptions = [...data.subscriptions, { id: `s${Date.now()}`, name: form.name, cost: parseFloat(form.cost), cycle: 'monthly', nextRenewal: todayPlus(parseInt(form.days || 30)), type: form.type || 'subscription', category: form.category || 'Other', apiCap: form.type === 'api' ? parseFloat(form.cost) : undefined, apiUsed: 0, usedThisMonth: true, lastUsedReset: new Date().toISOString() }];
       flash('Subscription added');
     } else if (modal.type === 'grocery-add') {
       if (!form.name?.trim()) return;
-      next.groceries = { ...data.groceries, list: [...data.groceries.list, { id: `g${Date.now()}`, name: form.name, qty: parseInt(form.qty || 1), category: form.category || 'Other', addedBy: 'You', completed: false }] };
+      next.groceries = { ...data.groceries, list: [...data.groceries.list, { id: `g${Date.now()}`, name: form.name, qty: parseInt(form.qty || 1), category: form.category || 'Other', addedBy: 'You', completed: false, recurring: form.recurring ? 'weekly' : null }] };
       flash('Added to list');
     } else if (modal.type === 'pantry-add') {
       if (!form.name?.trim()) return;
@@ -1969,12 +2818,50 @@ function Modal({ modal, data, save, close, flash }) {
       if (!form.name?.trim() || !form.start || !form.end) return;
       const [sh, sm] = form.start.split(':').map(Number);
       const [eh, em] = form.end.split(':').map(Number);
-      next.killzones = [...data.killzones, { id: `kz${Date.now()}`, name: form.name, startMin: sh * 60 + sm, endMin: eh * 60 + em, color: form.color || 'amber', alertOn: true, alertBefore: 15, journal: [] }];
+      next.killzones = [...data.killzones, { id: `kz${Date.now()}`, name: form.name, startMin: sh * 60 + sm, endMin: eh * 60 + em, color: form.color || 'amber', alertOn: true, alertBefore: 15, journal: [], checklist: ['HTF bias set', 'News checked', 'Risk defined'], skipUntil: null }];
       flash('Killzone added');
     } else if (modal.type === 'kz-journal') {
       if (!form.kzId || !form.note) return;
       next.killzones = data.killzones.map(k => k.id === form.kzId ? { ...k, journal: [{ id: `j${Date.now()}`, date: new Date().toISOString(), result: form.result || '—', note: form.note }, ...k.journal] } : k);
       flash('Logged');
+    } else if (modal.type === 'trading-account') {
+      if (!form.name?.trim() || form.balance === undefined || form.balance === '') return;
+      next.trading = {
+        ...(data.trading || { accounts: [], flows: [] }),
+        accounts: [
+          ...(data.trading?.accounts || []),
+          { id: `acc${Date.now()}`, name: form.name, type: form.accType || 'broker', currency: form.currency || 'USD', balance: parseFloat(form.balance) }
+        ]
+      };
+      flash('Account added');
+    } else if (modal.type === 'trading-flow') {
+      if (!form.accountId || !form.amount || !form.flowType) return;
+      next.trading = {
+        ...(data.trading || { accounts: [], flows: [] }),
+        flows: [
+          ...(data.trading?.flows || []),
+          { id: `f${Date.now()}`, accountId: form.accountId, type: form.flowType, amount: parseFloat(form.amount), date: form.date || new Date().toISOString(), note: form.note || '' }
+        ]
+      };
+      flash(form.flowType === 'deposit' ? 'Deposit logged' : 'Withdrawal logged');
+    } else if (modal.type === 'meal-add') {
+      if (!form.name?.trim()) return;
+      const kcal = parseFloat(form.kcal || 0);
+      const protein = parseFloat(form.protein || 0);
+      const carbs = parseFloat(form.carbs || 0);
+      const fat = parseFloat(form.fat || 0);
+      const b = data.body || defaultData.body;
+      next.body = {
+        ...b,
+        macros: {
+          ...b.macros,
+          calories: { ...b.macros.calories, used: b.macros.calories.used + kcal },
+          protein: { ...b.macros.protein, used: b.macros.protein.used + protein },
+          carbs: { ...(b.macros.carbs || { used: 0, goal: 280 }), used: (b.macros.carbs?.used || 0) + carbs },
+          fat: { ...(b.macros.fat || { used: 0, goal: 80 }), used: (b.macros.fat?.used || 0) + fat }
+        }
+      };
+      flash('Meal logged');
     }
     save(next);
     close();
@@ -1993,6 +2880,9 @@ function Modal({ modal, data, save, close, flash }) {
             {modal.type === 'pantry-add' && 'Add to pantry'}
             {modal.type === 'kz-add' && 'New killzone'}
             {modal.type === 'kz-journal' && 'Journal entry'}
+            {modal.type === 'trading-account' && 'New account'}
+            {modal.type === 'trading-flow' && 'Deposit / Withdrawal'}
+            {modal.type === 'meal-add' && 'Log a meal'}
           </h3>
           <button onClick={close} className="w-8 h-8 rounded-full bg-zinc-900 flex items-center justify-center text-zinc-400">
             <X size={16} />
@@ -2129,6 +3019,71 @@ function Modal({ modal, data, save, close, flash }) {
                 </div>
               </div>
               <textarea placeholder="Notes on the session…" className={inputCls + ' min-h-[80px] resize-none'} onChange={e => setForm({ ...form, note: e.target.value })} />
+            </>
+          )}
+
+          {modal.type === 'trading-account' && (
+            <>
+              <input autoFocus placeholder="Account name (e.g. FTMO, Kraken)" className={inputCls} onChange={e => setForm({ ...form, name: e.target.value })} />
+              <div className="flex gap-2">
+                {['broker', 'wallet', 'prop'].map(t => (
+                  <button key={t} onClick={() => setForm({ ...form, accType: t })} className={`flex-1 text-xs py-2.5 rounded-xl font-medium capitalize ${form.accType === t ? 'bg-cyan-500 text-zinc-900' : 'bg-zinc-900 text-zinc-400 ring-1 ring-zinc-800'}`}>
+                    {t}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input type="number" step="0.01" placeholder="Current balance" className={inputCls + ' flex-1'} onChange={e => setForm({ ...form, balance: e.target.value })} />
+                <input placeholder="USD" defaultValue="USD" className={inputCls + ' w-20'} onChange={e => setForm({ ...form, currency: e.target.value })} />
+              </div>
+            </>
+          )}
+
+          {modal.type === 'trading-flow' && (
+            <>
+              <div>
+                <label className="text-[11px] uppercase tracking-wider text-zinc-500">Account</label>
+                <div className="flex gap-1.5 mt-1.5 flex-wrap">
+                  {(data.trading?.accounts || []).map(a => (
+                    <button key={a.id} onClick={() => setForm({ ...form, accountId: a.id })} className={`text-xs px-3 py-1.5 rounded-full ${form.accountId === a.id ? 'bg-cyan-500 text-zinc-900 font-medium' : 'bg-zinc-900 text-zinc-400 ring-1 ring-zinc-800'}`}>{a.name}</button>
+                  ))}
+                </div>
+                {(data.trading?.accounts || []).length === 0 && (
+                  <p className="text-[11px] text-zinc-500 mt-2">No accounts yet — add one first.</p>
+                )}
+              </div>
+              <div>
+                <label className="text-[11px] uppercase tracking-wider text-zinc-500">Type</label>
+                <div className="flex gap-2 mt-1.5">
+                  {[
+                    { id: 'deposit', label: 'Deposit', cls: 'bg-emerald-500 text-zinc-900', icon: ArrowDownCircle },
+                    { id: 'withdrawal', label: 'Withdrawal', cls: 'bg-rose-500 text-white', icon: ArrowUpCircle }
+                  ].map(o => {
+                    const Icon = o.icon;
+                    return (
+                      <button key={o.id} onClick={() => setForm({ ...form, flowType: o.id })} className={`flex-1 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-1.5 ${form.flowType === o.id ? o.cls : 'bg-zinc-900 text-zinc-400 ring-1 ring-zinc-800'}`}>
+                        <Icon size={14} /> {o.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <input type="number" step="0.01" placeholder="Amount" className={inputCls} onChange={e => setForm({ ...form, amount: e.target.value })} />
+              <input type="date" defaultValue={new Date().toISOString().slice(0, 10)} className={inputCls} onChange={e => setForm({ ...form, date: new Date(e.target.value).toISOString() })} />
+              <input placeholder="Note (optional)" className={inputCls} onChange={e => setForm({ ...form, note: e.target.value })} />
+            </>
+          )}
+
+          {modal.type === 'meal-add' && (
+            <>
+              <input autoFocus placeholder="Meal (e.g. Chicken rice bowl)" className={inputCls} onChange={e => setForm({ ...form, name: e.target.value })} />
+              <div className="grid grid-cols-2 gap-2">
+                <input type="number" placeholder="Calories" className={inputCls} onChange={e => setForm({ ...form, kcal: e.target.value })} />
+                <input type="number" placeholder="Protein (g)" className={inputCls} onChange={e => setForm({ ...form, protein: e.target.value })} />
+                <input type="number" placeholder="Carbs (g)" className={inputCls} onChange={e => setForm({ ...form, carbs: e.target.value })} />
+                <input type="number" placeholder="Fat (g)" className={inputCls} onChange={e => setForm({ ...form, fat: e.target.value })} />
+              </div>
+              <p className="text-[10px] text-zinc-500">Totals roll into today’s macros.</p>
             </>
           )}
         </div>
