@@ -82,9 +82,20 @@ class DriveSyncService {
   }
 
   Future<void> signOut() async {
+    // `signOut` alone keeps the previously chosen account cached, so the next
+    // sign-in skips the picker — users couldn't switch Google accounts. Call
+    // `disconnect` to revoke the OAuth grant: the next sign-in re-shows the
+    // account chooser and re-asks for the Drive scopes.
     try {
-      await _signIn.signOut();
-    } catch (_) {}
+      await _signIn.disconnect();
+    } catch (_) {
+      // `disconnect` throws if the user was never authorized in this session
+      // (e.g. a fresh install or after a previous disconnect). Fall back to
+      // `signOut` so we still clear any in-memory session.
+      try {
+        await _signIn.signOut();
+      } catch (_) {}
+    }
     _user = null;
     onChanged?.call();
   }

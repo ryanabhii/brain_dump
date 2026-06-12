@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
-import 'package:flutter/foundation.dart';
+// Hide `Flow` because this app already has a Flow model (trading cash flow).
+import 'package:flutter/widgets.dart' hide Flow;
 import 'package:intl/intl.dart';
 
 import '../data/default_data.dart';
@@ -36,13 +37,20 @@ import '../utils/suggestions.dart';
 /// This is the Flutter equivalent of the React prototype's `data` state plus
 /// its `save()` function: every mutation builds a NEW [AppData] (immutably),
 /// calls [notifyListeners] so the UI rebuilds, and persists to storage.
-class AppState extends ChangeNotifier {
+class AppState extends ChangeNotifier with WidgetsBindingObserver {
   final StorageService _storage;
 
   /// The device's IANA timezone (e.g. "Asia/Kolkata"), detected at startup.
   final String localTimezone;
 
   AppData? _data;
+
+  // ── Sync polling cadence (lifecycle + backoff aware) ──
+  static const Duration _syncBaseInterval = Duration(seconds: 15);
+  static const Duration _syncMaxInterval = Duration(minutes: 10);
+  int _syncErrorCount = 0;
+  bool _appInForeground = true;
+  DateTime? _nextSyncAt;
 
   AppState(this._storage, {this.localTimezone = 'UTC'}) {
     _load();
@@ -53,9 +61,17 @@ class AppState extends ChangeNotifier {
     // unhandled-exception handler.  The DriveSyncService also logs the error
     // internally via debugPrint.
     _drive.init().ignore();
-    // Near-realtime sync: poll while signed in (no Drive push without a server).
-    _syncTimer = Timer.periodic(const Duration(seconds: 15), (_) {
-      if (driveSignedIn && !_syncing && _engine != null) unawaited(syncNow());
+    // Observe app lifecycle so polling pauses in the background.
+    WidgetsBinding.instance.addObserver(this);
+    // Near-realtime sync: poll while signed in, foregrounded, and not in
+    // backoff. Cadence backs off exponentially after errors so a flaky network
+    // or revoked token doesn't hammer Drive (and the battery).
+    _syncTimer = Timer.periodic(_syncBaseInterval, (_) {
+      if (!_appInForeground) return;
+      if (!driveSignedIn || _syncing || _engine == null) return;
+      final now = DateTime.now();
+      if (_nextSyncAt != null && now.isBefore(_nextSyncAt!)) return;
+      unawaited(syncNow());
     });
   }
 
@@ -64,8 +80,23 @@ class AppState extends ChangeNotifier {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _syncTimer?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final wasForeground = _appInForeground;
+    _appInForeground = state == AppLifecycleState.resumed;
+    // Resuming after a pause: try a sync immediately (and refresh notification
+    // schedules in case skipped days drifted while suspended).
+    if (!wasForeground && _appInForeground && _data != null) {
+      unawaited(Notifications.reschedule(_data!));
+      if (driveSignedIn && !_syncing && _engine != null) {
+        unawaited(syncNow());
+      }
+    }
   }
 
   Future<void> _load() async {
@@ -969,12 +1000,21 @@ class AppState extends ChangeNotifier {
       }
       await _storage.saveSyncBase(engine.base);
       lastSyncAt = DateTime.now();
+      _syncErrorCount = 0;
+      _nextSyncAt = null;
       notifyListeners();
       final c = result.conflicts;
       return 'Synced ${result.syncedTabs.length} tab(s)'
           '${c > 0 ? ' · $c kept-both' : ''}';
     } catch (e) {
       debugPrint('Sync failed: $e');
+      _syncErrorCount++;
+      // Exponential backoff: 15s → 30s → 1m → … capped at 10 minutes.
+      final backoffSeconds = math.min(
+        _syncMaxInterval.inSeconds,
+        _syncBaseInterval.inSeconds * math.pow(2, _syncErrorCount).toInt(),
+      );
+      _nextSyncAt = DateTime.now().add(Duration(seconds: backoffSeconds));
       // Surface the real error so it is diagnosable from the snackbar.
       final msg = e.toString();
       if (msg.contains('401') || msg.contains('403') ||

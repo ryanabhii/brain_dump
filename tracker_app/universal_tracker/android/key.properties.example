@@ -1,0 +1,13 @@
+# Copy this file to `android/key.properties` (which is gitignored) and fill in
+# the values for your release keystore. Generate a keystore with:
+#
+#   keytool -genkey -v -keystore ~/keystores/xenon54-tracker.jks \
+#     -keyalg RSA -keysize 2048 -validity 10000 -alias xenon54-tracker
+#
+# Then register the SHA-1 of this keystore as an Android app in Firebase
+# Console (project: universaltracker-67c32) under package
+# `com.xenon54.tracker`, and re-download `google-services.json`.
+storeFile=/absolute/path/to/xenon54-tracker.jks
+storePassword=REPLACE_ME
+keyAlias=xenon54-tracker
+keyPassword=REPLACE_ME
