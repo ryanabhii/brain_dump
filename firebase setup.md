@@ -1,138 +1,206 @@
-# Firebase + Google Cloud setup — Tracker (Android)
+# Firebase + Google Cloud setup — Tracker (Android, Codespaces edition)
 
-End-to-end walkthrough to wire **Google Sign-In + Drive sync** to a fresh
-install of Tracker. Assumes you control a Google account that will own the
-Firebase project. **Estimated time: 30–45 minutes** (most of it waiting for
-Drive API enablement and OAuth consent screen edits to propagate).
+Wires **Google Sign-In + Drive sync** to a fresh install of Tracker, with
+every shell step adapted for a **GitHub Codespace** (Linux container, no
+USB, no display). Browser steps in the Firebase / Cloud consoles are
+identical whether you run them from a Codespace or a laptop.
 
-> The repo currently ships a `google-services.json` pointing at the existing
-> Firebase project **`universaltracker-67c32`**. You only need this guide if
-> you are creating your own project from scratch, OR adding a new keystore
-> SHA-1, OR adding new tester accounts. Skip to the relevant section.
+**Time:** ~30–45 min, most of it waiting for Drive API enablement and OAuth
+consent edits to propagate.
+
+> The repo ships a `google-services.json` pointing at the shared Firebase
+> project **`universaltracker-67c32`**. You only need this guide if you are
+> creating your own project, adding a new SHA-1, or adding a new tester.
+> Skip to the relevant section.
 
 ---
 
 ## Contents
 
 1. [Prerequisites](#1-prerequisites)
-2. [Create the Firebase project](#2-create-the-firebase-project)
-3. [Add the Android app](#3-add-the-android-app)
-4. [Register your keystore SHA-1 fingerprints](#4-register-your-keystore-sha-1-fingerprints)
-5. [Enable Google Sign-In](#5-enable-google-sign-in)
-6. [Enable the Google Drive API](#6-enable-the-google-drive-api)
-7. [Configure the OAuth consent screen](#7-configure-the-oauth-consent-screen)
-8. [Add test users](#8-add-test-users)
-9. [Download `google-services.json`](#9-download-google-servicesjson)
-10. [Verify the build](#10-verify-the-build)
-11. [Going to production (OAuth verification)](#11-going-to-production-oauth-verification)
-12. [Troubleshooting](#12-troubleshooting)
+2. [Codespaces secrets setup](#2-codespaces-secrets-setup)
+3. [Create the Firebase project](#3-create-the-firebase-project)
+4. [Add the Android app](#4-add-the-android-app)
+5. [SHA-1 fingerprints](#5-sha-1-fingerprints)
+6. [Enable Google Sign-In](#6-enable-google-sign-in)
+7. [Enable the Google Drive API](#7-enable-the-google-drive-api)
+8. [OAuth consent screen](#8-oauth-consent-screen)
+9. [Test users](#9-test-users)
+10. [Install `google-services.json`](#10-install-google-servicesjson)
+11. [Build & test](#11-build--test)
+12. [Going to production](#12-going-to-production)
+13. [Troubleshooting](#13-troubleshooting)
 
 ---
 
 ## 1. Prerequisites
 
-| Tool | Version | Why |
-| --- | --- | --- |
-| Flutter SDK | **3.44.0** stable | Project pinned in CI. |
-| Android Studio | latest | For `keytool`, SDK manager, ADB. |
-| Java 17 (bundled with Android Studio) | — | `keytool` lives in `<jdk>/bin`. |
-| A Google account | — | Owns the Firebase project. |
-| A physical Android device or emulator with Google Play Services | API 26+ | Sign-In does not work on AOSP-only emulators. |
+**In your Codespace** (devcontainer must have JDK 17 + Flutter 3.44.0 +
+Android SDK). Verify:
 
-You should also have at least one **release keystore** ready (or plan to
-generate one in §4). The app id is fixed to **`com.xenon54.tracker`** —
-nothing in this guide will work if you change it without also updating
-[`android/app/build.gradle.kts`](android/app/build.gradle.kts).
+```bash
+java -version          # 17.x
+flutter --version      # 3.44.0
+command -v keytool     # must resolve
+```
 
----
+If `keytool` is missing:
 
-## 2. Create the Firebase project
+```bash
+sudo apt-get update && sudo apt-get install -y openjdk-17-jdk-headless
+```
 
-1. Go to <https://console.firebase.google.com/> and sign in with the account
-   that should own the project.
-2. Click **Add project**.
-3. Project name: `tracker-<your-handle>` (e.g. `tracker-xenon54`). Firebase
-   will append a random suffix to make the project id globally unique —
-   write down the final **Project ID**, you will need it everywhere.
-4. **Google Analytics**: disable. Tracker has no analytics integration, so
-   keeping it off avoids dragging in the GA SDK and an extra consent dialog.
-5. Click **Create project**, wait ~30 seconds, then **Continue**.
+**Other requirements:**
 
-You are now in the Firebase project dashboard.
+- A Google account that will own the Firebase project.
+- A **real Android phone** (API 26+) with Google Play Services for testing
+  sign-in. Codespaces is headless — no emulator, no USB.
+- App id is fixed to `com.xenon54.tracker`. Don't change it without also
+  updating [`android/app/build.gradle.kts`](tracker_app/universal_tracker/android/app/build.gradle.kts).
 
 ---
 
-## 3. Add the Android app
+## 2. Codespaces secrets setup
 
-1. From the project overview, click the **Android icon** (`</>` then Android
-   on newer UIs).
-2. **Android package name** — must be exactly:
-   ```
-   com.xenon54.tracker
-   ```
-   No trailing whitespace, no capitalisation differences. If this does not
-   match the value in [`android/app/build.gradle.kts`](android/app/build.gradle.kts)
-   (`applicationId`) sign-in will return error code 10 at runtime.
-3. **App nickname** (optional): `Tracker Android`. Cosmetic only.
-4. **Debug signing certificate SHA-1**: leave this blank for now — we set it
-   in §4 once we know the values.
-5. Click **Register app**.
-6. On the next screen you can download `google-services.json` and skip the
-   SDK / build.gradle instructions — Tracker already wires those in. We will
-   re-download the file in §9 after adding SHA-1s.
+Set these up **before** creating the Codespace you'll build in. Codespaces
+only inject secrets into containers created **after** the secret was saved
+and whose repo is in the secret's access list. Existing Codespaces don't
+get them retroactively — you'd have to rebuild or recreate.
+
+**Where:** GitHub → your avatar → **Settings → Codespaces → Codespaces
+secrets → New secret**. For each, set **Repository access → Selected
+repositories → `ryanabhii/brain_dump`** (or **All repositories**).
+
+| Secret name | Required? | Value | Used in |
+| --- | --- | --- | --- |
+| `GOOGLE_SERVICES_JSON_B64` | Recommended | Base64 of your `google-services.json` | §10 (option 2) |
+| `KEYSTORE_BASE64` | Only for release builds | Base64 of your release `.jks` | §5b |
+| `KEYSTORE_PASSWORD` | With `KEYSTORE_BASE64` | Keystore password | §5b, §11 |
+| `KEY_PASSWORD` | With `KEYSTORE_BASE64` | Key alias password | §11 |
+| `KEY_ALIAS` | Optional | Key alias (default: `xenon54-tracker`) | §11 |
+
+Skip the keystore secrets entirely if you only need debug builds.
+
+**How to base64-encode** (run on a trusted **local** machine, never inside
+the Codespace for the release keystore):
+
+```powershell
+# Windows / PowerShell — copies base64 to clipboard
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("$HOME\keystores\xenon54-tracker.jks")) | Set-Clipboard
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("$HOME\Downloads\google-services.json")) | Set-Clipboard
+```
+
+```bash
+# macOS / Linux
+base64 -w0 ~/keystores/xenon54-tracker.jks | pbcopy   # macOS
+base64 -w0 ~/keystores/xenon54-tracker.jks | xclip    # Linux
+```
+
+Paste the clipboard contents directly into the secret value field (no
+quotes, no surrounding whitespace, no line breaks).
+
+**Verify in the Codespace** after saving secrets:
+
+```bash
+env | grep -E 'KEYSTORE|GOOGLE_SERVICES|KEY_ALIAS|KEY_PASSWORD'
+echo "${#GOOGLE_SERVICES_JSON_B64}"   # should print a large number, not 0
+```
+
+If any print `0` or are missing: the secret isn't scoped to this repo, or
+your Codespace pre-dates the secret. Either **F1 → Codespaces: Rebuild
+Container**, or close + recreate the Codespace.
+
+> **Never** commit any of these values, paste them in chat, or echo them
+> to logs. Treat the release keystore and its passwords like prod creds.
 
 ---
 
-## 4. Register your keystore SHA-1 fingerprints
+## 3. Create the Firebase project
+
+Browser only.
+
+1. <https://console.firebase.google.com/> → **Add project**.
+2. Name `tracker-<your-handle>`. Note the final **Project ID**.
+3. **Disable** Google Analytics.
+4. **Create project**.
+
+---
+
+## 4. Add the Android app
+
+Browser only.
+
+1. Project overview → **Android icon**.
+2. **Package name**: `com.xenon54.tracker` (exact match required).
+3. Nickname: `Tracker Android`. SHA-1: leave blank for now.
+4. **Register app**. Skip the SDK / Gradle snippets — already wired.
+
+---
+
+## 5. SHA-1 fingerprints
 
 Google Sign-In ties the OAuth client to **(package name, SHA-1)** pairs.
-Every keystore that signs an APK/AAB you want to sign in from must be
-registered.
+Register every keystore that signs an APK you'll sign in from.
 
-### 4a. Find the debug SHA-1
+### 5a. Debug SHA-1 (in the Codespace)
 
-The Android Gradle Plugin generates a debug keystore on first build at:
+A fresh Codespace has no debug keystore. Create one + read its SHA-1:
 
+```bash
+mkdir -p ~/.android
+[ -f ~/.android/debug.keystore ] || keytool -genkey -v \
+  -keystore ~/.android/debug.keystore \
+  -storepass android -keypass android \
+  -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
+  -dname "CN=Android Debug,O=Android,C=US"
+
+keytool -list -v \
+  -keystore ~/.android/debug.keystore \
+  -alias androiddebugkey \
+  -storepass android -keypass android \
+  | grep SHA1:
 ```
-%USERPROFILE%\.android\debug.keystore   (Windows)
-~/.android/debug.keystore               (macOS/Linux)
+
+Or after a Gradle build:
+
+```bash
+cd tracker_app/universal_tracker/android
+./gradlew signingReport | grep -A2 ":app:debug"
 ```
 
-Default credentials are `androiddebugkey` / `android`. Get the SHA-1:
+> **Codespaces are ephemeral.** Every fresh container gets a new debug
+> keystore = **new SHA-1**. Either re-register in Firebase each time, or
+> commit a shared debug keystore into the repo and point
+> `signingConfigs.debug` at it. Never commit a **release** keystore.
+
+### 5b. Release keystore
+
+> **⚠ Production key warning.** The release keystore is the only thing
+> proving you own your Play Store listing. Lose it (and its passwords) and
+> you can never update the app under `com.xenon54.tracker` again. Whichever
+> path you pick below, back it up to **three independent places** before
+> you do anything else.
+
+You have two valid paths. Pick **one**.
+
+#### Path A — Generate on your local Windows machine (recommended)
+
+Use this if you already have JDK 17 locally, or are happy to install it
+(`winget install --id Microsoft.OpenJDK.17 --silent`, then reopen
+PowerShell so `keytool` is on PATH).
 
 ```powershell
-keytool -list -v `
-  -keystore $HOME\.android\debug.keystore `
-  -alias androiddebugkey `
-  -storepass android -keypass android `
-| Select-String "SHA1:"
-```
-
-Copy the 40-character hex string (e.g. `34:22:C8:6A:…`).
-
-Alternatively, from the project root:
-
-```powershell
-cd tracker_app\universal_tracker\android
-.\gradlew signingReport
-```
-
-…and read the `SHA1` value under the `:app:debug` variant.
-
-### 4b. Generate a release keystore (if you don't already have one)
-
-```powershell
+mkdir $HOME\keystores -Force
 keytool -genkey -v `
   -keystore $HOME\keystores\xenon54-tracker.jks `
   -keyalg RSA -keysize 2048 -validity 10000 `
   -alias xenon54-tracker
 ```
 
-Pick strong passwords. **Back this file up** somewhere safe (offsite + a
-password manager note) — if you lose it you cannot push updates to an
-existing Play Store listing under the same app id, ever.
+Pick strong keystore + key passwords. **Save them in your password
+manager *now***, not after the next step.
 
-Get its SHA-1:
+Read the SHA-1:
 
 ```powershell
 keytool -list -v `
@@ -141,215 +209,268 @@ keytool -list -v `
 | Select-String "SHA1:"
 ```
 
-### 4c. Register both in Firebase
-
-1. Firebase Console → **Project settings** (gear icon, top-left) → **General**.
-2. Scroll to **Your apps** → click your Android app → **Add fingerprint**.
-3. Paste the **debug** SHA-1, click **Save**.
-4. Repeat for the **release** SHA-1.
-
-> **Play App Signing**: if you publish via Play Console, Google re-signs your
-> AAB with a managed **app signing key**. The SHA-1 of the upload key you
-> generated above is *not* what end-users' devices see for installed
-> builds. Once you upload your first AAB, Play Console → **Release →
-> Setup → App integrity → App signing** will show you the **App signing
-> key certificate**. Register **that SHA-1 too**, otherwise sign-in works
-> on your debug device but fails on installs from the Play Store.
-
----
-
-## 5. Enable Google Sign-In
-
-1. Firebase Console → **Authentication** (left nav) → **Get started**.
-2. **Sign-in method** tab → click **Google** in the providers list.
-3. Toggle **Enable**.
-4. **Project support email**: pick the Google account you signed in with.
-5. **Save**.
-
-Behind the scenes Firebase has now provisioned:
-- A **Web client** OAuth 2.0 client (used as `serverClientId` on Android).
-- An **Android** OAuth 2.0 client tied to package + SHA-1s from §4.
-
-You can see both in Google Cloud Console → **APIs & Services → Credentials**.
-
----
-
-## 6. Enable the Google Drive API
-
-Firebase doesn't surface this. Do it in Google Cloud Console for the same
-project:
-
-1. Open <https://console.cloud.google.com/>.
-2. Project picker (top bar) → select the project Firebase created (same
-   **Project ID** as §2.3).
-3. Left nav → **APIs & Services** → **Enabled APIs & services** → **+ Enable
-   APIs and services**.
-4. Search **Google Drive API** → click it → **Enable**.
-5. Wait until the status changes to "API enabled" (usually a few seconds).
-
-If you skip this, syncs will fail with HTTP 403 and the message
-`Sync failed — Drive API not enabled or scope not granted`.
-
----
-
-## 7. Configure the OAuth consent screen
-
-1. Cloud Console → **APIs & Services** → **OAuth consent screen**.
-2. **User type**: **External**. (Internal is only available for Workspace
-   organisations.)
-3. **App information**:
-   - **App name**: `Tracker`
-   - **User support email**: your email
-   - **App logo**: optional in Testing mode, **required** for verification.
-4. **App domain**: optional in Testing mode. For verification you will need:
-   - **Application home page**: e.g. `https://github.com/ryanabhii/brain_dump`
-   - **Privacy policy link**: a public URL serving [`PRIVACY.md`](../../PRIVACY.md)
-     — GitHub Pages of this repo is fine.
-   - **Terms of service link**: optional but recommended.
-5. **Authorized domains**: add the bare domain hosting your privacy policy
-   (e.g. `github.io`).
-6. **Developer contact information**: your email. **Save and continue**.
-7. **Scopes** screen → **Add or remove scopes** → search and tick:
-   - `https://www.googleapis.com/auth/drive`
-   - `https://www.googleapis.com/auth/drive.appdata`
-
-   Both are classified as **restricted** / **sensitive**. **Save and
-   continue**.
-8. **Test users** → leave empty for now (we do this in §8). **Save and
-   continue**.
-9. Review summary → **Back to dashboard**.
-
-The app is now in **Testing** publishing status. In this state:
-- Up to **100 distinct Google accounts** can sign in.
-- Each test user sees an unverified-app warning ("Google hasn't verified
-  this app") with an **Advanced → Go to Tracker (unsafe)** link. This is
-  expected.
-- Refresh tokens expire after **7 days**, so testers re-sign-in weekly.
-
----
-
-## 8. Add test users
-
-1. Cloud Console → **APIs & Services** → **OAuth consent screen** →
-   **Audience** (or **Test users** on older UIs).
-2. **+ Add users** → paste up to 100 Google account email addresses, one per
-   line. Each tester must be added **before** they sign in; the app rejects
-   sign-in attempts from accounts not on this list while in Testing.
-3. **Save**.
-
-For shared development I recommend at minimum: your personal Google
-account, a secondary test account, and anyone else who needs to dogfood.
-
----
-
-## 9. Download `google-services.json`
-
-1. Firebase Console → **Project settings** (gear icon) → **General**.
-2. **Your apps** → Android app → click the **google-services.json** download
-   button.
-3. Move the file to:
-   ```
-   tracker_app/universal_tracker/android/app/google-services.json
-   ```
-   …overwriting the existing file (which points at the
-   `universaltracker-67c32` shared project).
-4. Verify the file contains:
-   - your new `project_id`
-   - `"package_name": "com.xenon54.tracker"` in both `client_info` and the
-     OAuth android_info block
-   - the SHA-1s you registered (under `oauth_client[].android_info.certificate_hash`)
-
-> **Do not commit your own** `google-services.json` to a public fork unless
-> you have locked the OAuth client down with package+SHA-1 (which Firebase
-> does by default). The file is not strictly a secret, but treat it like a
-> config you would not paste into a Slack channel.
-
----
-
-## 10. Verify the build
+Base64-encode for the Codespaces secret and copy to clipboard:
 
 ```powershell
-cd tracker_app\universal_tracker
-flutter pub get
-flutter clean
-
-# Plug in an Android device with USB debugging on, or start an emulator
-# with Google Play Services. Then:
-flutter run -d <device-id>
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("$HOME\keystores\xenon54-tracker.jks")) | Set-Clipboard
 ```
+
+Paste into the `KEYSTORE_BASE64` secret from §2. Save the passwords as
+`KEYSTORE_PASSWORD` and `KEY_PASSWORD` too.
+
+Skip ahead to **Backup checklist** below.
+
+#### Path B — Generate inside a Codespace (acceptable if you back up)
+
+Only safe if you immediately export the keystore out of the container.
+The container can be rebuilt or auto-deleted at any time.
+
+```bash
+# 1. Generate in the Codespace
+mkdir -p ~/keystores
+keytool -genkey -v \
+  -keystore ~/keystores/xenon54-tracker.jks \
+  -keyalg RSA -keysize 2048 -validity 10000 \
+  -alias xenon54-tracker
+```
+
+Pick strong passwords. **Save them in your password manager *now*.**
+
+```bash
+# 2. Read the SHA-1
+keytool -list -v \
+  -keystore ~/keystores/xenon54-tracker.jks \
+  -alias xenon54-tracker \
+  | grep SHA1:
+
+# 3. Print base64 (select all, copy to clipboard)
+base64 -w0 ~/keystores/xenon54-tracker.jks; echo
+```
+
+On your **local Windows** machine, decode the clipboard contents and save
+the binary `.jks` locally too:
+
+```powershell
+$b64 = Get-Clipboard
+mkdir $HOME\keystores -Force
+[IO.File]::WriteAllBytes("$HOME\keystores\xenon54-tracker.jks", [Convert]::FromBase64String($b64))
+Get-FileHash $HOME\keystores\xenon54-tracker.jks -Algorithm SHA256
+```
+
+Then save the base64 string + passwords as Codespaces secrets per §2
+(`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_PASSWORD`).
+
+#### Backup checklist (both paths)
+
+Don't skip any. **Each row must be done before you delete the original
+keystore or rebuild the container.**
+
+| # | Where | Contents |
+| --- | --- | --- |
+| 1 | Password manager (1Password / Bitwarden / etc.) | Keystore password, key password, key alias (`xenon54-tracker`), SHA-1, **base64 of the `.jks` as a secure-note attachment** |
+| 2 | Local Windows machine at `$HOME\keystores\xenon54-tracker.jks` | The binary `.jks` (back this folder up via OneDrive / external drive) |
+| 3 | GitHub Codespaces secrets (§2) | `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_PASSWORD` |
+
+#### Verify the round-trip before relying on backup #3
+
+Critical: confirm the secret actually works **while you still have the
+original keystore**. F1 → **Codespaces: Rebuild Container**, or create a
+fresh Codespace, then:
+
+```bash
+mkdir -p ~/keystores
+echo "$KEYSTORE_BASE64" | base64 -d > ~/keystores/xenon54-tracker.jks
+keytool -list -v \
+  -keystore ~/keystores/xenon54-tracker.jks \
+  -alias xenon54-tracker \
+  -storepass "$KEYSTORE_PASSWORD" \
+  | grep SHA1:
+```
+
+The SHA-1 must match what you saw in step 1. If it doesn't (or the
+command errors out), fix the secret now — empty value, mangled base64,
+wrong password — before you destroy the working copy.
+
+#### Dev / throwaway keystore (skip backups)
+
+If this keystore will only ever sign debug-like builds you don't care
+about, just `keytool -genkey` inside the Codespace and accept that it
+vanishes with the container. **Do not use this for anything you'll
+publish to Play Store.**
+
+### 5c. Register in Firebase
+
+Browser. Firebase Console → **Project settings → General → Your apps →
+Add fingerprint**. Paste debug SHA-1, **Save**. Repeat for release SHA-1.
+
+> **Play App Signing**: Once you've uploaded an AAB to Play Console, Play
+> re-signs it with a managed key. Go to Play Console → **Release → Setup →
+> App integrity → App signing**, copy the **App signing key certificate**
+> SHA-1, register that in Firebase too. Otherwise sign-in works in dev but
+> fails on Play installs.
+
+---
+
+## 6. Enable Google Sign-In
+
+Browser. Firebase Console → **Authentication → Get started → Sign-in
+method → Google → Enable**. Pick a support email. **Save**.
+
+This provisions a Web OAuth client (used as `serverClientId` on Android)
+and an Android OAuth client tied to your package + SHA-1s.
+
+---
+
+## 7. Enable the Google Drive API
+
+Browser. <https://console.cloud.google.com/> → project picker → select your
+Firebase project → **APIs & Services → Enabled APIs & services → + Enable
+APIs and services** → search **Google Drive API** → **Enable**.
+
+Skipping this gives `Sync failed — Drive API not enabled or scope not granted`.
+
+---
+
+## 8. OAuth consent screen
+
+Browser. Cloud Console → **APIs & Services → OAuth consent screen**.
+
+1. **User type**: External.
+2. **App name**: `Tracker`. User support email: yours.
+3. **App domain** (required for verification, optional in Testing):
+   - Homepage: `https://github.com/ryanabhii/brain_dump`
+   - Privacy policy: host [`PRIVACY.md`](PRIVACY.md) on GitHub Pages
+     (enable in repo → **Settings → Pages**, no Codespace needed).
+4. **Authorized domains**: add `github.io`.
+5. **Scopes** → add:
+   - `https://www.googleapis.com/auth/drive`
+   - `https://www.googleapis.com/auth/drive.appdata`
+6. **Save**.
+
+App is now in **Testing**: ≤100 testers, unverified-app warning shown,
+refresh tokens expire every 7 days.
+
+---
+
+## 9. Test users
+
+Browser. Cloud Console → **OAuth consent screen → Audience → + Add users** →
+paste tester Google account emails. **Save**.
+
+Each tester must be added **before** they try to sign in.
+
+---
+
+## 10. Install `google-services.json`
+
+Download from Firebase Console → **Project settings → General → Your apps →
+Android → google-services.json** to your **local browser**.
+
+Place it at `tracker_app/universal_tracker/android/app/google-services.json`
+in the Codespace, overwriting the existing one. Three options:
+
+1. **Easiest — drag/upload via VS Code explorer.** In the Codespace,
+   right-click the `tracker_app/universal_tracker/android/app/` folder →
+   **Upload…** → pick the downloaded file.
+2. **Codespaces secret** (using `GOOGLE_SERVICES_JSON_B64` from §2):
+   ```bash
+   echo "$GOOGLE_SERVICES_JSON_B64" | base64 -d \
+     > tracker_app/universal_tracker/android/app/google-services.json
+   ```
+3. **`curl` from a private gist** using a token in a secret. Useful if
+   multiple contributors share one Firebase project.
+
+Verify the file contains:
+
+- your new `project_id`
+- `"package_name": "com.xenon54.tracker"`
+- your SHA-1s under `oauth_client[].android_info.certificate_hash`
+
+```bash
+grep -E 'project_id|package_name|certificate_hash' \
+  tracker_app/universal_tracker/android/app/google-services.json
+```
+
+Do **not** commit your own `google-services.json` to a public fork.
+
+---
+
+## 11. Build & test
+
+Codespace can build but **cannot run** the app — no USB, no display, no
+Play Services. Build the APK in the Codespace, install on your phone.
+
+```bash
+cd tracker_app/universal_tracker
+flutter pub get
+flutter build apk --debug
+# APK at build/app/outputs/flutter-apk/app-debug.apk
+```
+
+Download via VS Code explorer (right-click → **Download…**), transfer to
+the phone (`adb install app-debug.apk` from your local machine, or copy
+via Drive / USB).
 
 In the app:
 
-1. Open the **Profile** tab.
-2. Tap **Sign in with Google**.
-3. Pick your Google account.
-4. Accept the consent dialog (unverified-app warning while in Testing — tap
-   **Advanced → Go to Tracker (unsafe)**).
-5. You should land back in the app with your email shown on the Identity
-   card. The first sync runs automatically; subsequent syncs run every 15s
-   while the app is foregrounded.
+1. Profile tab → **Sign in with Google**.
+2. Accept the unverified-app warning (**Advanced → Go to Tracker (unsafe)**).
+3. Email should appear on the Identity card; sync runs every 15s while
+   foregrounded.
 
-To smoke-test the **account switcher fix** (the bug you reported):
+**Smoke-test account switcher:** sign out → sign in again → you should see
+the Google account chooser (not silent re-sign-in). Confirms the
+`disconnect()` fix in [`drive_sync.dart`](tracker_app/universal_tracker/lib/services/drive_sync.dart).
 
-1. Sign out from the Profile screen.
-2. Tap **Sign in with Google** again.
-3. You should now see the Google account chooser instead of being silently
-   signed back in to the previous account. This is because
-   [`drive_sync.dart`](lib/services/drive_sync.dart) calls `disconnect()`
-   on sign-out, revoking the cached grant.
+> If you really need `flutter run` from the Codespace, you can `adb connect`
+> over the network (Android 11+ Wireless Debugging + ngrok TCP tunnel from
+> your LAN). Fiddly; only worth it for heavy sign-in iteration.
 
 ---
 
-## 11. Going to production (OAuth verification)
+## 12. Going to production
 
-While in Testing your app is capped at 100 users and shows an
-unverified-app warning. For a public Play Store launch you need to submit
-the OAuth consent screen for **Google verification**.
+Same as anywhere — Codespace doesn't change this. Required because the app
+uses **restricted scopes** (`drive`, `drive.appdata`):
 
-Required because Tracker requests `drive` and `drive.appdata`, which Google
-classifies as **restricted scopes**:
+1. Public HTTPS privacy policy (use GitHub Pages on this repo).
+2. Public HTTPS homepage.
+3. YouTube demo video showing the consent prompt + what the app does with
+   Drive data.
+4. Domain verification in <https://search.google.com/search-console>.
+5. Cloud Console → **OAuth consent screen → Publish app → Prepare for
+   verification**.
+6. **CASA security assessment** (~$1–2k USD/yr) required for the `drive`
+   restricted scope. Narrow to `drive.file` to avoid it (loses multi-user
+   sharing).
 
-1. **Privacy policy live** at a public HTTPS URL covering Drive data usage
-   (the template in [`PRIVACY.md`](../../PRIVACY.md) is structured for
-   this).
-2. **Homepage** at a public HTTPS URL describing the app.
-3. **YouTube demo video** showing:
-   - Where the OAuth consent prompt appears in your app.
-   - The Drive permission being requested.
-   - What the app does with Drive data.
-4. **Domain verification** of the homepage + privacy domain in
-   <https://search.google.com/search-console>.
-5. Submit via Cloud Console → **OAuth consent screen** → **Publish app** →
-   **Prepare for verification**.
-6. Because `drive` is a **restricted scope**, expect an additional
-   **CASA security assessment** invoice (currently ~$1–2k USD/year through a
-   third-party assessor) before Google approves. Avoid it by narrowing to
-   `drive.file` if you can give up the multi-user sharing feature.
-
-This is a slow process (weeks). Plan accordingly.
+Process takes weeks.
 
 ---
 
-## 12. Troubleshooting
+## 13. Troubleshooting
 
-| Symptom | Likely cause |
+| Symptom | Cause |
 | --- | --- |
-| `ApiException: 10` (DEVELOPER_ERROR) | Package name or SHA-1 mismatch in Firebase. Re-check §3.2 and §4.3. Most common: wrong SHA-1 entered, or Play App Signing key SHA-1 not registered for store installs. |
-| `ApiException: 12500` | `google-services.json` missing or stale. Re-download from Firebase and rebuild (`flutter clean`). |
-| Sign-in dialog appears, you pick an account, then nothing happens | OAuth consent screen has not been configured (§7), or the tester is not in the test users list (§8). |
-| `Sync failed — Drive API not enabled or scope not granted` | Drive API not enabled (§6) or the user revoked the scope at <https://myaccount.google.com/permissions>. Sign out + back in to re-prompt. |
-| Sign-in works but `signOut` does not surface the account chooser on the next login | You are running an old build from before the `disconnect()` fix in [`drive_sync.dart`](lib/services/drive_sync.dart). `flutter clean && flutter run`. |
-| `app keeps the previously chosen account when launching from cold` | Expected — `attemptLightweightAuthentication()` restores the session. To force a chooser, sign out from the Profile screen first. |
-| Refresh-token expired after 7 days | Normal in **Testing** publishing status. Re-sign-in. Goes away after OAuth verification (§11). |
-| Sign-in works on `flutter run` but fails on Play Store install | Play App Signing key SHA-1 missing from Firebase (§4c warning). |
-| `INVALID_CLIENT` error | The `serverClientId` does not match a Web-type OAuth client in the project. Check Cloud Console → Credentials; you should see one client of type **Web application** (auto-created by Firebase). |
-| Web build sign-in fails with `redirect_uri_mismatch` | The web build needs an additional **Web** OAuth client with `http://localhost:<port>` listed under **Authorized redirect URIs**. Out of scope for the Android-first launch. |
+| `ApiException: 10` (DEVELOPER_ERROR) | Package name or SHA-1 mismatch. Re-check §4 + §5. |
+| `ApiException: 10` after recreating Codespace | New container = new debug keystore = new SHA-1. Re-register in Firebase or commit a shared debug keystore. |
+| `ApiException: 12500` | `google-services.json` missing or stale. Re-download, `flutter clean`. |
+| `keytool: command not found` | JDK missing in devcontainer. `sudo apt-get install -y openjdk-17-jdk-headless`. |
+| `echo "${#KEYSTORE_BASE64}"` prints `0` | Secret not created, not scoped to repo, or Codespace pre-dates the secret. Verify at GitHub → Settings → Codespaces (§2), then **rebuild container** or recreate the Codespace. |
+| Sign-in dialog appears then nothing | OAuth consent screen not configured (§8), or tester not in users list (§9). |
+| `Sync failed — Drive API not enabled or scope not granted` | §7 not done, or user revoked at <https://myaccount.google.com/permissions>. Sign out + in. |
+| `signOut` doesn't show chooser on next sign-in | Old build before `disconnect()` fix. `flutter clean && flutter build apk --debug`. |
+| Refresh token expires after 7 days | Normal in Testing. Goes away after OAuth verification. |
+| Works in dev, fails on Play Store install | Play App Signing key SHA-1 missing from Firebase (§5c). |
+| `INVALID_CLIENT` | No Web OAuth client. Check Cloud Console → Credentials. |
+| `flutter devices` empty | Expected — no USB in Codespaces. Build APK + install on a real phone (§11). |
+| Gradle / pub very slow on first build | Cold caches. Persist `~/.gradle` and `~/.pub-cache` via `devcontainer.json` `mounts`. |
 
-For deeper diagnostics:
+Logs from the phone (run on your **local** machine, not the Codespace):
 
-```powershell
-adb logcat | Select-String -Pattern "Tracker|GoogleSignIn|GoogleApi"
+```bash
+adb logcat | grep -E "Tracker|GoogleSignIn|GoogleApi"
 ```
 
-…or watch the Flutter console — `DriveSyncService.init/signIn/signOut` and
-`AppState.syncNow` all log to `debugPrint` on failure.
+Flutter console — `DriveSyncService.init/signIn/signOut` and
+`AppState.syncNow` all `debugPrint` on failure.
