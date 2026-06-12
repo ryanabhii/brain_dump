@@ -1,41 +1,49 @@
 {
   "project_info": {
-    "project_number": "495044828066",
-    "project_id": "universaltracker-67c32",
-    "storage_bucket": "universaltracker-67c32.firebasestorage.app"
+    "project_number": "556061044868",
+    "project_id": "xenon-80342",
+    "storage_bucket": "xenon-80342.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:495044828066:android:5f033d8f0d591db41a70fb",
+        "mobilesdk_app_id": "1:556061044868:android:1a1b9a67742aa8866492d1",
         "android_client_info": {
           "package_name": "com.xenon54.tracker"
         }
       },
       "oauth_client": [
         {
-          "client_id": "495044828066-9t3fi2dc0hnbeo31lsoebpkul3158jkm.apps.googleusercontent.com",
+          "client_id": "556061044868-86b7bfig582enfo804g0vdjkqkn61d1m.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.xenon54.tracker",
-            "certificate_hash": "3422c86ac6bfa0498f89f709c49b548cf6fdba4a"
+            "certificate_hash": "b043ee75b26a92f592045a88f4e7eb4da2c1de52"
           }
         },
         {
-          "client_id": "495044828066-rso94oho71gf24mme9vkrc0c1ip3335r.apps.googleusercontent.com",
+          "client_id": "556061044868-jijvi7kros6tfdav1hnucd05hfkf03i7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.xenon54.tracker",
+            "certificate_hash": "2c8f6cba07ba3aede1a91df2272ca8ee2f962d2c"
+          }
+        },
+        {
+          "client_id": "556061044868-atcnokuocnhu0ai5bqce5j2sddjr8pm9.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyBLQazyKSb2I4N36c8ZrD0HhzRslMpCR_I"
+          "current_key": "AIzaSyAtJnuue3DUcEUnM_t3AGXQ15OYs-ifevI"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "495044828066-rso94oho71gf24mme9vkrc0c1ip3335r.apps.googleusercontent.com",
+              "client_id": "556061044868-atcnokuocnhu0ai5bqce5j2sddjr8pm9.apps.googleusercontent.com",
               "client_type": 3
             }
           ]
