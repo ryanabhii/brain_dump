@@ -1,0 +1,26 @@
+{
+  "name": "Flutter Dev",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-22.04",
+  "hostRequirements": {
+    "cpus": 4,
+    "memory": "8gb"
+  },
+  "onCreateCommand": "bash .devcontainer/install-flutter.sh",
+  "remoteEnv": {
+    "PATH": "/home/vscode/flutter/bin:/home/vscode/flutter/bin/cache/dart-sdk/bin:${containerEnv:PATH}",
+    "FLUTTER_ROOT": "/home/vscode/flutter"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "Dart-Code.dart-code",
+        "Dart-Code.flutter"
+      ],
+      "settings": {
+        "dart.flutterSdkPath": "/home/vscode/flutter",
+        "dart.sdkPath": "/home/vscode/flutter/bin/cache/dart-sdk"
+      }
+    }
+  },
+  "remoteUser": "vscode"
+}
