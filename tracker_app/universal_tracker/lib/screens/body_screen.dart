@@ -4,10 +4,13 @@ import 'package:provider/provider.dart';
 import '../data/suggestions.dart';
 import '../models/body.dart';
 import '../models/meal_nutrition.dart';
+import '../models/templates.dart';
 import '../models/workout.dart';
 import '../state/app_state.dart';
 import '../theme/colors.dart';
 import '../utils/meal_time.dart';
+import '../widgets/save_as_template_toggle.dart';
+import '../widgets/template_picker.dart';
 import '../widgets/ui.dart';
 
 /// Port of the React `BodyScreen` (Prototype.tsx line 2224): streak, next
@@ -799,18 +802,31 @@ class _MealAddSheetState extends State<_MealAddSheet> {
   /// The meal timing (breakfast/lunch/snack/dinner), preset from the clock.
   String _tag = mealTagForHour(DateTime.now().hour);
 
+  /// When true, the save action also persists this entry's shape as a
+  /// reusable `MealTemplate`. Per-100g math is derived from the entered
+  /// weight + macros so future picks scale correctly.
+  bool _alsoTemplate = false;
+
   @override
   void initState() {
     super.initState();
     // Keep [_active] in sync as the name changes; rescale when weight changes.
     _name.addListener(_syncMeal);
     _weight.addListener(_applyScaling);
+    // Also rebuild on weight changes so the "Save as template" toggle's
+    // disabled-reason hint flips off the moment the user enters a weight.
+    _weight.addListener(_rebuildIfMounted);
+  }
+
+  void _rebuildIfMounted() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
     _name.removeListener(_syncMeal);
     _weight.removeListener(_applyScaling);
+    _weight.removeListener(_rebuildIfMounted);
     _name.dispose();
     _weight.dispose();
     _kcal.dispose();
@@ -855,24 +871,68 @@ class _MealAddSheetState extends State<_MealAddSheet> {
     _fat.text = _fmt(t.fat);
   }
 
+  /// Apply a saved meal template: name + per-100g macros + default serving.
+  /// The weight field becomes the source of truth so the user can override
+  /// "how much I actually ate" without re-typing nutrition.
+  void _applyMealTemplate(MealTemplate t) {
+    setState(() {
+      _name.text = t.name;
+      _active = MealNutrition(
+        kcalPer100: t.kcalPer100,
+        proteinPer100: t.proteinPer100,
+        carbsPer100: t.carbsPer100,
+        fatPer100: t.fatPer100,
+        servingG: t.defaultServingG,
+      );
+      _weight.text = _fmt(t.defaultServingG);
+    });
+    _applyScaling();
+  }
+
   void _save() {
     final name = _name.text.trim();
     if (name.isEmpty) return;
     final messenger = ScaffoldMessenger.of(context);
-    context.read<AppState>().logMeal(
+    final app = context.read<AppState>();
+    final kcal = double.tryParse(_kcal.text.trim()) ?? 0;
+    final protein = double.tryParse(_protein.text.trim()) ?? 0;
+    final carbs = double.tryParse(_carbs.text.trim()) ?? 0;
+    final fat = double.tryParse(_fat.text.trim()) ?? 0;
+    final weight = double.tryParse(_weight.text.trim()) ?? 0;
+    app.logMeal(
       name: name,
-      kcal: double.tryParse(_kcal.text.trim()) ?? 0,
-      protein: double.tryParse(_protein.text.trim()) ?? 0,
-      carbs: double.tryParse(_carbs.text.trim()) ?? 0,
-      fat: double.tryParse(_fat.text.trim()) ?? 0,
-      dryWeightG: double.tryParse(_weight.text.trim()) ?? 0,
+      kcal: kcal,
+      protein: protein,
+      carbs: carbs,
+      fat: fat,
+      dryWeightG: weight,
       tag: _tag,
     );
+    if (_alsoTemplate && weight > 0) {
+      // Convert the entered serving into per-100g math so the template
+      // scales correctly when re-applied at a different portion later.
+      final f = 100 / weight;
+      app.saveMealTemplate(
+        MealTemplate(
+          id: app.newTemplateId('mt'),
+          name: name,
+          kcalPer100: kcal * f,
+          proteinPer100: protein * f,
+          carbsPer100: carbs * f,
+          fatPer100: fat * f,
+          defaultServingG: weight,
+        ),
+      );
+    }
     Navigator.of(context).pop();
     messenger.showSnackBar(
-      const SnackBar(
-        content: Text('Meal logged'),
-        duration: Duration(milliseconds: 1200),
+      SnackBar(
+        content: Text(
+          _alsoTemplate && weight > 0
+              ? 'Meal logged · template saved'
+              : 'Meal logged',
+        ),
+        duration: const Duration(milliseconds: 1400),
       ),
     );
   }
@@ -880,9 +940,22 @@ class _MealAddSheetState extends State<_MealAddSheet> {
   @override
   Widget build(BuildContext context) {
     const num = TextInputType.number;
+    final mealTemplates = context.watch<AppState>().data!.mealTemplates;
     return SheetShell(
       title: 'Log a meal',
       children: [
+        // Templates first — one tap fills the name, weight and macros via
+        // [_applyMealTemplate]. The picker is hidden when the user hasn't
+        // created any yet, so it doesn't add noise.
+        TemplatePicker<MealTemplate>(
+          templates: mealTemplates,
+          accent: AppColors.cyan500,
+          labelOf: (t) => t.name,
+          subtitleOf: (t) =>
+              '${t.kcalPer100.toStringAsFixed(0)} kcal/100g',
+          iconOf: (_) => Icons.restaurant,
+          onPick: _applyMealTemplate,
+        ),
         AppAutocompleteField(
           controller: _name,
           hint: 'Meal (e.g. Chicken rice bowl)',
@@ -987,7 +1060,18 @@ class _MealAddSheetState extends State<_MealAddSheet> {
           'Totals roll into today’s macros.',
           style: TextStyle(fontSize: 10, color: AppColors.zinc500),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
+        SaveAsTemplateToggle(
+          value: _alsoTemplate,
+          onChanged: (v) => setState(() => _alsoTemplate = v),
+          // Per-100g math requires a positive weight; otherwise the template
+          // we'd save is meaningless. Surface that requirement up-front.
+          disabledReason:
+              (double.tryParse(_weight.text.trim()) ?? 0) <= 0
+                  ? 'Enter weight to derive per-100g values'
+                  : null,
+        ),
+        const SizedBox(height: 12),
         PrimaryButton(label: 'Save', onPressed: _save),
       ],
     );
@@ -1075,6 +1159,7 @@ class _WorkoutAddSheetState extends State<_WorkoutAddSheet> {
   final _name = TextEditingController();
   final _focus = TextEditingController();
   final _duration = TextEditingController();
+  bool _alsoTemplate = false;
 
   @override
   void dispose() {
@@ -1093,30 +1178,66 @@ class _WorkoutAddSheetState extends State<_WorkoutAddSheet> {
     }
   }
 
+  void _applyWorkoutTemplate(WorkoutTemplate t) {
+    setState(() {
+      _name.text = t.name;
+      _focus.text = t.focus;
+      if (t.defaultDurationMin > 0) {
+        _duration.text = t.defaultDurationMin.toString();
+      }
+    });
+  }
+
   void _save() {
     final name = _name.text.trim();
     if (name.isEmpty) return;
     final messenger = ScaffoldMessenger.of(context);
-    context.read<AppState>().addWorkout(
-      name: name,
-      focus: _focus.text.trim(),
-      durationMin: double.tryParse(_duration.text.trim()) ?? 0,
-    );
+    final app = context.read<AppState>();
+    final focus = _focus.text.trim();
+    final dur = double.tryParse(_duration.text.trim()) ?? 0;
+    app.addWorkout(name: name, focus: focus, durationMin: dur);
+    if (_alsoTemplate) {
+      app.saveWorkoutTemplate(
+        WorkoutTemplate(
+          id: app.newTemplateId('wt'),
+          name: name,
+          focus: focus,
+          defaultDurationMin: dur,
+        ),
+      );
+    }
     Navigator.of(context).pop();
     messenger.showSnackBar(
-      const SnackBar(
-        content: Text('Workout logged'),
-        duration: Duration(milliseconds: 1200),
+      SnackBar(
+        content: Text(
+          _alsoTemplate ? 'Workout logged · template saved' : 'Workout logged',
+        ),
+        duration: const Duration(milliseconds: 1400),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final app = context.read<AppState>();
+    final app = context.watch<AppState>();
     return SheetShell(
       title: 'Log a workout',
       children: [
+        TemplatePicker<WorkoutTemplate>(
+          templates: app.data!.workoutTemplates,
+          accent: AppColors.sky400,
+          labelOf: (t) => t.name,
+          subtitleOf: (t) {
+            final dur = t.defaultDurationMin > 0
+                ? '${t.defaultDurationMin.toStringAsFixed(0)} min'
+                : null;
+            return [t.focus, dur]
+                .where((s) => s != null && s.isNotEmpty)
+                .join(' · ');
+          },
+          iconOf: (_) => Icons.fitness_center,
+          onPick: _applyWorkoutTemplate,
+        ),
         AppAutocompleteField(
           controller: _name,
           hint: 'Workout (e.g. Push, Pull, Legs)',
@@ -1135,7 +1256,12 @@ class _WorkoutAddSheetState extends State<_WorkoutAddSheet> {
           hint: 'Duration (min)',
           keyboardType: TextInputType.number,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
+        SaveAsTemplateToggle(
+          value: _alsoTemplate,
+          onChanged: (v) => setState(() => _alsoTemplate = v),
+        ),
+        const SizedBox(height: 12),
         PrimaryButton(label: 'Save', onPressed: _save),
       ],
     );

@@ -93,9 +93,13 @@ class SyncEngine {
         conflicts += out.conflicts;
       }
 
+      // Upload BEFORE advancing base: if the upload throws (network blip,
+      // 401, quota), we must not record `merged` as "what the remote has",
+      // otherwise the next sync would diff base against the still-old remote
+      // and treat every locally-added item as a remote-side delete.
+      if (role == SyncRole.editor) await store.upload(tab.key, merged);
       data = tab.apply(data, merged);
       base[tab.key] = merged;
-      if (role == SyncRole.editor) await store.upload(tab.key, merged);
       synced.add(tab.key);
     }
 

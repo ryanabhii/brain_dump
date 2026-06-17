@@ -8,6 +8,10 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <!-- Allow reminders to fire while the device is in low-power idle. -->
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <!-- Voice brain dumps: speech_to_text records the mic and transcribes it
+         on-device (Android SpeechRecognizer). Audio is not stored \u2014 only the
+         resulting text. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <application
         android:label="Tracker"
         android:name="${applicationName}"
@@ -64,6 +68,12 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- speech_to_text needs to find a SpeechRecognizer implementation on
+             Android 11+ (package visibility filter). Without this, isAvailable
+             returns false even when Google\u2019s recognizer is installed. -->
+        <intent>
+            <action android:name="android.speech.RecognitionService"/>
         </intent>
     </queries>
 </manifest>

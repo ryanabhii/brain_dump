@@ -9,8 +9,66 @@ import '../utils/format.dart';
 import '../utils/time_util.dart';
 import '../widgets/ui.dart';
 
+/// Catalog of every dashboard tile, in canonical layout order. The dashboard
+/// renders tiles whose [key] is in `profile.pinnedHomeTiles` in this order;
+/// the edit sheet lists them in this order too.
+class HomeTileSpec {
+  final String key; // stable id persisted in Profile.pinnedHomeTiles
+  final String label; // shown in the edit sheet
+  final IconData icon; // shown in the edit sheet
+  const HomeTileSpec({
+    required this.key,
+    required this.label,
+    required this.icon,
+  });
+}
+
+const List<HomeTileSpec> kHomeTiles = [
+  HomeTileSpec(
+    key: 'killzone',
+    label: 'Killzone hero',
+    icon: Icons.trending_up,
+  ),
+  HomeTileSpec(
+    key: 'spend',
+    label: 'Monthly spend',
+    icon: Icons.account_balance_wallet,
+  ),
+  HomeTileSpec(
+    key: 'apiBurn',
+    label: 'API burn',
+    icon: Icons.local_fire_department,
+  ),
+  HomeTileSpec(
+    key: 'capture',
+    label: 'Capture · open items',
+    icon: Icons.psychology_alt,
+  ),
+  HomeTileSpec(
+    key: 'household',
+    label: 'Household · groceries',
+    icon: Icons.inventory_2,
+  ),
+  HomeTileSpec(
+    key: 'streak',
+    label: 'Streak',
+    icon: Icons.local_fire_department,
+  ),
+  HomeTileSpec(
+    key: 'body',
+    label: 'Body · macros',
+    icon: Icons.fitness_center,
+  ),
+  HomeTileSpec(
+    key: 'quickDump',
+    label: 'Quick brain dump',
+    icon: Icons.auto_awesome,
+  ),
+];
+
 /// Port of the React `DashboardScreen` (Prototype.tsx line 568): a summary that
 /// reads from every section. Cards tap through to their tab via [onNavigate].
+/// Each tile can be hidden by the user via the header's edit button.
 class DashboardScreen extends StatefulWidget {
   /// Switch the bottom-nav tab (indexes match RootShell's screen list).
   final void Function(int index) onNavigate;
@@ -85,6 +143,113 @@ class _DashboardScreenState extends State<DashboardScreen> {
         : hour < 17
         ? Icons.wb_sunny
         : Icons.nightlight;
+    // Personalise the greeting when the user has set a name; falls back to a
+    // bare "Good morning" so the empty-state still reads naturally.
+    final name = data.profile.displayName.trim();
+    final greetingLine = name.isEmpty ? greeting : '$greeting, $name';
+
+    // Build every tile widget unconditionally; we filter by visibility
+    // below. This keeps the per-tile [Pressable] animation controllers
+    // alive even when their neighbour is toggled, which avoids the visible
+    // flicker that came from tearing a tile down + rebuilding it at a
+    // different position in the widget tree.
+    final enabled = data.profile.pinnedHomeTiles.toSet();
+    final tiles = <String, Widget>{
+      'killzone': _killzoneHero(active, upcoming),
+      'spend': _StatCard(
+        icon: Icons.account_balance_wallet,
+        iconColor: AppColors.rose400,
+        label: 'Monthly',
+        value: '\$${monthly.toStringAsFixed(2)}',
+        sub: renewSoon > 0 ? '$renewSoon renew soon' : 'On track',
+        subColor: renewSoon > 0 ? AppColors.amber400 : null,
+        onTap: () => widget.onNavigate(2),
+      ),
+      'apiBurn': _apiBurnCard(highBurn),
+      'capture': _StatCard(
+        icon: Icons.psychology_alt,
+        iconColor: AppColors.violet400,
+        label: 'Capture',
+        value: '$pendingDumps',
+        sub: 'Open items',
+        onTap: () => widget.onNavigate(3),
+      ),
+      'household': _StatCard(
+        icon: Icons.inventory_2,
+        iconColor: AppColors.emerald400,
+        label: 'Household',
+        value: '$groceryPending',
+        sub: lowStock > 0 ? '$lowStock low stock' : 'On list',
+        subColor: lowStock > 0 ? AppColors.amber400 : null,
+        onTap: () => widget.onNavigate(4),
+      ),
+      'streak': _StatCard(
+        icon: Icons.local_fire_department,
+        iconColor: AppColors.orange400,
+        label: 'Streak',
+        value: '${app.currentStreak} days',
+        sub: 'Workout or meal logged',
+        onTap: () => widget.onNavigate(5),
+      ),
+      'body': _bodyCard(body),
+      'quickDump': _quickDumpTile(),
+    };
+
+    // Canonical row layout. Each entry is either:
+    //   - a single-tile row (full width), or
+    //   - a pair-tile row (two halves, ALWAYS rendered as a Row with two
+    //     Expanded slots even if one slot is hidden, so the surviving tile
+    //     keeps its element position across toggles).
+    const layout = <(String, String?)>[
+      ('killzone', null),
+      ('spend', 'apiBurn'),
+      ('capture', 'household'),
+      ('streak', 'body'),
+      ('quickDump', null),
+    ];
+
+    final body0 = <Widget>[];
+    for (final row in layout) {
+      final leftKey = row.$1;
+      final rightKey = row.$2;
+      final leftOn = enabled.contains(leftKey);
+      final rightOn = rightKey != null && enabled.contains(rightKey);
+      if (!leftOn && !rightOn) continue;
+      Widget rowWidget;
+      if (rightKey == null) {
+        // Solo full-width tile.
+        rowWidget = tiles[leftKey]!;
+      } else {
+        // Always a two-Expanded Row, even when one slot is empty — the
+        // surviving tile's Element position is preserved across toggles, so
+        // its Pressable's AnimationController isn't re-created (which was
+        // the cause of the flicker). The trick is the `flex: 0` on the
+        // hidden side plus an animated gap, so a solo tile still grows to
+        // full width without the tree changing shape.
+        rowWidget = AnimatedSize(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          alignment: Alignment.topCenter,
+          child: Row(
+            children: [
+              Expanded(
+                flex: leftOn ? 1 : 0,
+                child: leftOn ? tiles[leftKey]! : const SizedBox.shrink(),
+              ),
+              // Gap collapses to zero when one side is hidden, so the
+              // surviving tile fills the row edge-to-edge.
+              SizedBox(width: (leftOn && rightOn) ? 12 : 0),
+              Expanded(
+                flex: rightOn ? 1 : 0,
+                child: rightOn ? tiles[rightKey]! : const SizedBox.shrink(),
+              ),
+            ],
+          ),
+        );
+      }
+      if (body0.isNotEmpty) body0.add(const SizedBox(height: 12));
+      body0.add(rowWidget);
+    }
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
@@ -93,6 +258,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Sidebar opener — top-left of the dashboard. Uses Scaffold.of
+            // (the RootShell's scaffold) so it always finds the drawer that
+            // owns every tab.
+            Padding(
+              padding: const EdgeInsets.only(right: 12, top: 2),
+              child: RoundIconButton(
+                icon: Icons.menu_rounded,
+                onTap: () => Scaffold.of(context).openDrawer(),
+              ),
+            ),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -102,7 +277,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       Icon(greetIcon, size: 12, color: AppColors.zinc500),
                       const SizedBox(width: 6),
                       Text(
-                        greeting,
+                        greetingLine,
                         style: const TextStyle(
                           fontSize: 12,
                           color: AppColors.zinc500,
@@ -122,6 +297,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ],
               ),
             ),
+            // Edit tiles — opens the sheet to toggle which tiles are visible.
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: RoundIconButton(
+                icon: Icons.tune_rounded,
+                onTap: () => _openEditTiles(context),
+              ),
+            ),
             RoundIconButton(
               icon: Icons.settings,
               onTap: () => widget.onNavigate(6),
@@ -129,232 +312,381 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
         const SizedBox(height: 20),
+        if (body0.isEmpty)
+          _EmptyDashboardHint(onEdit: () => _openEditTiles(context))
+        else
+          ...body0,
+      ],
+    );
+  }
 
-        // Killzone hero
-        Pressable(
-          onTap: () => widget.onNavigate(1),
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: active != null
-                    ? AppColors.a(AppColors.rose500, 0.3)
-                    : AppColors.zinc800,
-              ),
-              gradient: active != null
-                  ? LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        AppColors.a(AppColors.rose500, 0.2),
-                        Colors.transparent,
-                      ],
-                    )
-                  : null,
-              color: active == null
-                  ? AppColors.a(AppColors.zinc900, 0.8)
-                  : null,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.trending_up,
-                      size: 14,
-                      color: active != null
-                          ? AppColors.rose400
-                          : AppColors.zinc400,
-                    ),
-                    const SizedBox(width: 6),
-                    SectionLabel(
-                      active != null ? 'Live session' : 'Next killzone',
-                      color: active != null
-                          ? AppColors.rose400
-                          : AppColors.zinc400,
-                    ),
+  // ── Per-tile builders ──────────────────────────────────────────────────
+
+  Widget _killzoneHero(dynamic active, dynamic upcoming) {
+    return Pressable(
+      onTap: () => widget.onNavigate(1),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: active != null
+                ? AppColors.a(AppColors.rose500, 0.3)
+                : AppColors.zinc800,
+          ),
+          gradient: active != null
+              ? LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppColors.a(AppColors.rose500, 0.2),
+                    Colors.transparent,
                   ],
+                )
+              : null,
+          color: active == null ? AppColors.a(AppColors.zinc900, 0.8) : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.trending_up,
+                  size: 14,
+                  color: active != null
+                      ? AppColors.rose400
+                      : AppColors.zinc400,
                 ),
-                const SizedBox(height: 8),
-                if (active != null) ...[
-                  Text(
-                    active.name,
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    'In progress · ends ${fmtTime(active.endMin)}',
+                const SizedBox(width: 6),
+                SectionLabel(
+                  active != null ? 'Live session' : 'Next killzone',
+                  color: active != null
+                      ? AppColors.rose400
+                      : AppColors.zinc400,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (active != null) ...[
+              Text(
+                active.name as String,
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                'In progress · ends ${fmtTime(active.endMin as int)}',
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: AppColors.zinc400,
+                ),
+              ),
+            ] else if (upcoming != null) ...[
+              Text(
+                upcoming.name as String,
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Builder(
+                builder: (_) {
+                  final tu = timeUntil(upcoming.startMin as int, _now);
+                  return Text(
+                    'Opens in ${tu.h}h ${tu.m}m · ${fmtTime(upcoming.startMin as int)}',
                     style: const TextStyle(
                       fontSize: 14,
                       color: AppColors.zinc400,
                     ),
-                  ),
-                ] else if (upcoming != null) ...[
-                  Text(
-                    upcoming.name,
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Builder(
-                    builder: (_) {
-                      final tu = timeUntil(upcoming.startMin, _now);
-                      return Text(
-                        'Opens in ${tu.h}h ${tu.m}m · ${fmtTime(upcoming.startMin)}',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: AppColors.zinc400,
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ],
-            ),
+                  );
+                },
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _apiBurnCard(dynamic highBurn) => _StatCard(
+    icon: Icons.local_fire_department,
+    iconColor: AppColors.orange400,
+    label: 'API burn',
+    value: highBurn != null
+        ? '${(((highBurn.apiUsed ?? 0) as num) / ((highBurn.apiCap ?? 1) as num) * 100).round()}%'
+        : 'OK',
+    sub: highBurn != null ? highBurn.name as String : 'All within budget',
+    valueColor: highBurn == null ? AppColors.emerald400 : null,
+    onTap: () => widget.onNavigate(2),
+  );
+
+  Widget _bodyCard(dynamic body) => _StatCard(
+    icon: Icons.fitness_center,
+    iconColor: AppColors.cyan400,
+    label: 'Body',
+    value:
+        '${(body.macros.calories.used as num).round()} / ${(body.macros.calories.goal as num).round()}',
+    sub: '${(body.macros.protein.used as num).round()}g protein',
+    onTap: () => widget.onNavigate(5),
+  );
+
+  Widget _quickDumpTile() => Pressable(
+    onTap: () => widget.onNavigate(3),
+    child: Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: const LinearGradient(
+          colors: [AppColors.violet500, Color(0xFF4F46E5)],
+        ),
+      ),
+      child: Row(
+        children: const [
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: Colors.white24,
+            child: Icon(Icons.auto_awesome, size: 18, color: Colors.white),
           ),
-        ),
-        const SizedBox(height: 16),
-
-        // Stat grid (2 columns)
-        Row(
-          children: [
-            Expanded(
-              child: _StatCard(
-                icon: Icons.account_balance_wallet,
-                iconColor: AppColors.rose400,
-                label: 'Monthly',
-                value: '\$${monthly.toStringAsFixed(2)}',
-                sub: renewSoon > 0 ? '$renewSoon renew soon' : 'On track',
-                subColor: renewSoon > 0 ? AppColors.amber400 : null,
-                onTap: () => widget.onNavigate(2),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _StatCard(
-                icon: Icons.local_fire_department,
-                iconColor: AppColors.orange400,
-                label: 'API burn',
-                value: highBurn != null
-                    ? '${((highBurn.apiUsed ?? 0) / (highBurn.apiCap ?? 1) * 100).round()}%'
-                    : 'OK',
-                sub: highBurn != null ? highBurn.name : 'All within budget',
-                valueColor: highBurn == null ? AppColors.emerald400 : null,
-                onTap: () => widget.onNavigate(2),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _StatCard(
-                icon: Icons.psychology_alt,
-                iconColor: AppColors.violet400,
-                label: 'Capture',
-                value: '$pendingDumps',
-                sub: 'Open items',
-                onTap: () => widget.onNavigate(3),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _StatCard(
-                icon: Icons.inventory_2,
-                iconColor: AppColors.emerald400,
-                label: 'Household',
-                value: '$groceryPending',
-                sub: lowStock > 0 ? '$lowStock low stock' : 'On list',
-                subColor: lowStock > 0 ? AppColors.amber400 : null,
-                onTap: () => widget.onNavigate(4),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _StatCard(
-                icon: Icons.local_fire_department,
-                iconColor: AppColors.orange400,
-                label: 'Streak',
-                value: '${app.currentStreak} days',
-                sub: 'Workout or meal logged',
-                onTap: () => widget.onNavigate(5),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _StatCard(
-                icon: Icons.fitness_center,
-                iconColor: AppColors.cyan400,
-                label: 'Body',
-                value:
-                    '${body.macros.calories.used.round()} / ${body.macros.calories.goal.round()}',
-                sub: '${body.macros.protein.used.round()}g protein',
-                onTap: () => widget.onNavigate(5),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-
-        // Quick brain dump
-        Pressable(
-          onTap: () => widget.onNavigate(3),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              gradient: const LinearGradient(
-                colors: [AppColors.violet500, Color(0xFF4F46E5)],
-              ),
-            ),
-            child: Row(
-              children: const [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: Colors.white24,
-                  child: Icon(
-                    Icons.auto_awesome,
-                    size: 18,
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Quick brain dump',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
                     color: Colors.white,
                   ),
                 ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Quick brain dump',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                      SizedBox(height: 2),
-                      Text(
-                        'Tap to capture a thought',
-                        style: TextStyle(fontSize: 12, color: Colors.white70),
-                      ),
-                    ],
-                  ),
+                SizedBox(height: 2),
+                Text(
+                  'Tap to capture a thought',
+                  style: TextStyle(fontSize: 12, color: Colors.white70),
                 ),
-                Icon(Icons.add, color: Colors.white),
               ],
+            ),
+          ),
+          Icon(Icons.add, color: Colors.white),
+        ],
+      ),
+    ),
+  );
+
+  void _openEditTiles(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const _EditTilesSheet(),
+    );
+  }
+}
+
+// ─── Empty state ──────────────────────────────────────────────────────────
+
+class _EmptyDashboardHint extends StatelessWidget {
+  final VoidCallback onEdit;
+  const _EmptyDashboardHint({required this.onEdit});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(20),
+    decoration: surfaceCard(),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Row(
+          children: [
+            Icon(Icons.dashboard_customize_outlined,
+                size: 16, color: AppColors.cyan400),
+            SizedBox(width: 8),
+            Text(
+              'No tiles to show',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: AppColors.zinc100,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'You hid every dashboard tile. Pick which ones you want back.',
+          style: TextStyle(fontSize: 12, color: AppColors.zinc400, height: 1.4),
+        ),
+        const SizedBox(height: 14),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: FilledButton.icon(
+            onPressed: onEdit,
+            icon: const Icon(Icons.tune_rounded, size: 16),
+            label: const Text('Edit tiles'),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.cyan500,
+              foregroundColor: AppColors.zinc950,
             ),
           ),
         ),
       ],
+    ),
+  );
+}
+
+// ─── Edit tiles sheet ─────────────────────────────────────────────────────
+
+class _EditTilesSheet extends StatelessWidget {
+  const _EditTilesSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    final app = context.watch<AppState>();
+    final enabled = app.data!.profile.pinnedHomeTiles.toSet();
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        decoration: const BoxDecoration(
+          color: AppColors.zinc950,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          border: Border(top: BorderSide(color: AppColors.zinc800)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Drag handle
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 14),
+                decoration: BoxDecoration(
+                  color: AppColors.zinc700,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const Text(
+              'Edit dashboard tiles',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.3,
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Toggle which summary tiles show on Home.',
+              style: TextStyle(fontSize: 12, color: AppColors.zinc500),
+            ),
+            const SizedBox(height: 14),
+            for (final spec in kHomeTiles)
+              _TileToggleRow(
+                spec: spec,
+                enabled: enabled.contains(spec.key),
+                onToggle: () => app.toggleHomeTile(spec.key),
+              ),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.cyan300,
+                ),
+                child: const Text(
+                  'Done',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TileToggleRow extends StatelessWidget {
+  final HomeTileSpec spec;
+  final bool enabled;
+  final VoidCallback onToggle;
+  const _TileToggleRow({
+    required this.spec,
+    required this.enabled,
+    required this.onToggle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onToggle,
+      borderRadius: BorderRadius.circular(12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: enabled
+              ? AppColors.a(AppColors.cyan500, 0.08)
+              : AppColors.a(AppColors.zinc100, 0.03),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: enabled
+                ? AppColors.a(AppColors.cyan500, 0.3)
+                : AppColors.zinc800,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AppColors.a(
+                  enabled ? AppColors.cyan500 : AppColors.zinc100,
+                  enabled ? 0.18 : 0.05,
+                ),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                spec.icon,
+                size: 16,
+                color: enabled ? AppColors.cyan300 : AppColors.zinc400,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                spec.label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: enabled ? AppColors.zinc100 : AppColors.zinc400,
+                ),
+              ),
+            ),
+            // Native-ish Switch reads as the standard "toggle" affordance.
+            Switch(
+              value: enabled,
+              onChanged: (_) => onToggle(),
+              activeThumbColor: Colors.white,
+              activeTrackColor: AppColors.cyan500,
+              inactiveTrackColor: AppColors.zinc800,
+              inactiveThumbColor: AppColors.zinc600,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

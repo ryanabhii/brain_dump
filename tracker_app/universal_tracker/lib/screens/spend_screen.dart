@@ -4,10 +4,13 @@ import 'package:provider/provider.dart';
 
 import '../data/suggestions.dart';
 import '../models/subscription.dart';
+import '../models/templates.dart';
 import '../state/app_state.dart';
 import '../theme/colors.dart';
 import '../utils/format.dart';
 import '../utils/grouping.dart';
+import '../widgets/save_as_template_toggle.dart';
+import '../widgets/template_picker.dart';
 import '../widgets/ui.dart';
 
 /// Port of the React `SubsScreen` (Prototype.tsx line 1144):
@@ -549,6 +552,7 @@ class _AddSubscriptionSheetState extends State<_AddSubscriptionSheet> {
   final _category = TextEditingController();
   final _days = TextEditingController(text: '30');
   String _type = 'subscription';
+  bool _alsoTemplate = false;
 
   @override
   void dispose() {
@@ -565,26 +569,56 @@ class _AddSubscriptionSheetState extends State<_AddSubscriptionSheet> {
     if (name.isEmpty || cost == null) return;
     // Capture the messenger BEFORE popping — after pop this context is gone.
     final messenger = ScaffoldMessenger.of(context);
-    context.read<AppState>().addSubscription(
+    final app = context.read<AppState>();
+    final cat = _category.text;
+    final cadence = int.tryParse(_days.text.trim()) ?? 30;
+    app.addSubscription(
       name: name,
       cost: cost,
       type: _type,
-      category: _category.text,
-      days: int.tryParse(_days.text.trim()) ?? 30,
+      category: cat,
+      days: cadence,
     );
+    if (_alsoTemplate) {
+      app.saveSubscriptionTemplate(
+        SubscriptionTemplate(
+          id: app.newTemplateId('st'),
+          name: name,
+          cost: cost,
+          type: _type,
+          category: cat.trim().isEmpty ? 'Other' : cat.trim(),
+          cadenceDays: cadence,
+        ),
+      );
+    }
     Navigator.of(context).pop();
     messenger.showSnackBar(
-      const SnackBar(
-        content: Text('Subscription added'),
-        duration: Duration(milliseconds: 1200),
+      SnackBar(
+        content: Text(
+          _alsoTemplate
+              ? 'Subscription added · template saved'
+              : 'Subscription added',
+        ),
+        duration: const Duration(milliseconds: 1400),
       ),
     );
+  }
+
+  void _applyTemplate(SubscriptionTemplate t) {
+    setState(() {
+      _name.text = t.name;
+      _cost.text = t.cost.toString();
+      _category.text = t.category;
+      _days.text = t.cadenceDays.toString();
+      _type = t.type;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     // Lift the sheet above the keyboard.
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    final app = context.watch<AppState>();
     return Padding(
       padding: EdgeInsets.only(bottom: bottomInset),
       child: Container(
@@ -603,12 +637,20 @@ class _AddSubscriptionSheetState extends State<_AddSubscriptionSheet> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
+            TemplatePicker<SubscriptionTemplate>(
+              templates: app.data!.subscriptionTemplates,
+              accent: AppColors.rose400,
+              labelOf: (t) => t.name,
+              subtitleOf: (t) =>
+                  '\$${t.cost.toStringAsFixed(2)} · ${t.type}',
+              iconOf: (_) => Icons.credit_card,
+              onPick: _applyTemplate,
+            ),
             AppAutocompleteField(
               controller: _name,
               hint: 'Name (e.g. Netflix)',
-              options: context.read<AppState>().suggestionsFor(
-                SuggestionField.subscription,
-              ),
+              options:
+                  app.suggestionsFor(SuggestionField.subscription),
             ),
             const SizedBox(height: 12),
             _field(
@@ -628,9 +670,8 @@ class _AddSubscriptionSheetState extends State<_AddSubscriptionSheet> {
             AppAutocompleteField(
               controller: _category,
               hint: 'Category',
-              options: context.read<AppState>().suggestionsFor(
-                SuggestionField.spendCategory,
-              ),
+              options:
+                  app.suggestionsFor(SuggestionField.spendCategory),
             ),
             const SizedBox(height: 12),
             _field(
@@ -638,7 +679,12 @@ class _AddSubscriptionSheetState extends State<_AddSubscriptionSheet> {
               'Days until next renewal',
               keyboard: TextInputType.number,
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
+            SaveAsTemplateToggle(
+              value: _alsoTemplate,
+              onChanged: (v) => setState(() => _alsoTemplate = v),
+            ),
+            const SizedBox(height: 12),
             FilledButton(
               onPressed: _save,
               style: FilledButton.styleFrom(

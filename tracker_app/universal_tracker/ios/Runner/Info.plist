@@ -66,5 +66,11 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- speech_to_text needs both mic + speech recognition entitlements on
+	     iOS. Audio is not persisted; only the on-device transcript is kept. -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Tracker uses the microphone to capture voice brain dumps. Audio is transcribed on-device and not stored.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Tracker transcribes your voice brain dumps on-device so you can search them later.</string>
 </dict>
 </plist>

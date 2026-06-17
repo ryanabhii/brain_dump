@@ -1,9 +1,10 @@
 import '../data/suggestions.dart';
 
-/// Builds the suggestion list for [field] by layering the user's learned
-/// history (most-recent first) on top of the bundled catalog, de-duplicated
-/// case-insensitively. [learned] is `AppData.suggestions` (keyed by
-/// `SuggestionField.name`).
+/// Builds the suggestion list for [field] from the user's learned history
+/// (most-recent first), de-duplicated case-insensitively. [learned] is
+/// `AppData.suggestions` (keyed by `SuggestionField.name`). The app used to
+/// layer a bundled offline catalog on top; that's been removed in favour of
+/// user-defined templates (see `models/templates.dart`).
 List<String> mergedSuggestions(
   SuggestionField field,
   Map<String, List<String>> learned,
@@ -18,9 +19,6 @@ List<String> mergedSuggestions(
   }
 
   for (final v in learned[field.name] ?? const <String>[]) {
-    add(v);
-  }
-  for (final v in kSuggestionCatalog[field] ?? const <String>[]) {
     add(v);
   }
   return out;

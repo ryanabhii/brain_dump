@@ -4,11 +4,14 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../data/suggestions.dart';
+import '../models/templates.dart';
 import '../models/trading.dart';
 import '../state/app_state.dart';
 import '../theme/colors.dart';
 import '../utils/format.dart';
 import '../utils/time_util.dart';
+import 'save_as_template_toggle.dart';
+import 'template_picker.dart';
 import 'ui.dart';
 
 /// Per-account P&L = current balance − lifetime net deposits. (Honest port of
@@ -591,8 +594,16 @@ class _AccountAddSheet extends StatefulWidget {
 class _AccountAddSheetState extends State<_AccountAddSheet> {
   final _name = TextEditingController();
   final _balance = TextEditingController();
-  final _currency = TextEditingController(text: 'USD');
+  // Seeded from the user's default currency in [initState] so each new
+  // account picks up their preference instead of always defaulting to USD.
+  final _currency = TextEditingController();
   String _type = 'broker';
+
+  @override
+  void initState() {
+    super.initState();
+    _currency.text = context.read<AppState>().data!.profile.defaultCurrency;
+  }
 
   @override
   void dispose() {
@@ -715,11 +726,14 @@ class _FlowAddSheetState extends State<_FlowAddSheet> {
   String? _accountId;
   String _type = 'deposit';
   DateTime _date = DateTime.now();
+  bool _alsoTemplate = false;
+  final _templateName = TextEditingController();
 
   @override
   void dispose() {
     _amount.dispose();
     _note.dispose();
+    _templateName.dispose();
     super.dispose();
   }
 
@@ -727,30 +741,74 @@ class _FlowAddSheetState extends State<_FlowAddSheet> {
     final amt = double.tryParse(_amount.text.trim());
     if (_accountId == null || amt == null) return;
     final messenger = ScaffoldMessenger.of(context);
-    context.read<AppState>().addFlow(
+    final app = context.read<AppState>();
+    final note = _note.text.trim();
+    app.addFlow(
       accountId: _accountId!,
       type: _type,
       amount: amt,
       date: _date.toIso8601String(),
-      note: _note.text.trim(),
+      note: note,
     );
+    if (_alsoTemplate) {
+      // Flows need a human-readable name (separate from the per-entry note),
+      // so the template's name comes from a dedicated field that appears
+      // once the toggle is on. Falls back to "{type} ${amt}" so a forgotten
+      // name still produces a usable template.
+      final name = _templateName.text.trim().isEmpty
+          ? '${_type == 'deposit' ? 'Deposit' : 'Withdrawal'} '
+                '\$${amt.toStringAsFixed(2)}'
+          : _templateName.text.trim();
+      app.saveFlowTemplate(
+        FlowTemplate(
+          id: app.newTemplateId('ft'),
+          name: name,
+          type: _type,
+          amount: amt,
+          note: note,
+        ),
+      );
+    }
     Navigator.of(context).pop();
     messenger.showSnackBar(
       SnackBar(
         content: Text(
-          _type == 'deposit' ? 'Deposit logged' : 'Withdrawal logged',
+          _alsoTemplate
+              ? '${_type == 'deposit' ? 'Deposit' : 'Withdrawal'} logged · template saved'
+              : _type == 'deposit'
+                  ? 'Deposit logged'
+                  : 'Withdrawal logged',
         ),
-        duration: const Duration(milliseconds: 1200),
+        duration: const Duration(milliseconds: 1400),
       ),
     );
   }
 
+  void _applyTemplate(FlowTemplate t) {
+    setState(() {
+      _type = t.type;
+      if (t.amount > 0) _amount.text = t.amount.toString();
+      if (t.note.isNotEmpty) _note.text = t.note;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final accounts = context.read<AppState>().data!.trading.accounts;
+    final app = context.watch<AppState>();
+    final accounts = app.data!.trading.accounts;
     return SheetShell(
       title: 'Deposit / Withdrawal',
       children: [
+        TemplatePicker<FlowTemplate>(
+          templates: app.data!.flowTemplates,
+          accent: AppColors.orange400,
+          labelOf: (t) => t.name,
+          subtitleOf: (t) =>
+              '${t.type == 'deposit' ? '+' : '−'}\$${t.amount.toStringAsFixed(2)}',
+          iconOf: (t) =>
+              t.type == 'deposit' ? Icons.arrow_downward : Icons.arrow_upward,
+          onPick: _applyTemplate,
+        ),
         const SectionLabel('Account'),
         const SizedBox(height: 8),
         if (accounts.isEmpty)
@@ -879,7 +937,19 @@ class _FlowAddSheetState extends State<_FlowAddSheet> {
         ),
         const SizedBox(height: 12),
         AppTextField(controller: _note, hint: 'Note (optional)'),
-        const SizedBox(height: 20),
+        const SizedBox(height: 12),
+        SaveAsTemplateToggle(
+          value: _alsoTemplate,
+          onChanged: (v) => setState(() => _alsoTemplate = v),
+        ),
+        if (_alsoTemplate) ...[
+          const SizedBox(height: 8),
+          AppTextField(
+            controller: _templateName,
+            hint: 'Template name (e.g. Monthly DCA)',
+          ),
+        ],
+        const SizedBox(height: 12),
         PrimaryButton(label: 'Save', onPressed: _save),
       ],
     );

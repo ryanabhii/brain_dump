@@ -6,7 +6,6 @@ import 'package:flutter/widgets.dart' hide Flow;
 import 'package:intl/intl.dart';
 
 import '../data/default_data.dart';
-import '../data/meal_nutrition.dart';
 import '../data/suggestions.dart';
 import '../models/app_data.dart';
 import '../models/body.dart';
@@ -17,6 +16,7 @@ import '../models/meal_nutrition.dart';
 import '../models/profile.dart';
 import '../models/workout.dart';
 import '../models/subscription.dart';
+import '../models/templates.dart';
 import '../models/trading.dart';
 import '../services/drive_sync.dart';
 import '../services/notifications.dart';
@@ -46,7 +46,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   AppData? _data;
 
   // ── Sync polling cadence (lifecycle + backoff aware) ──
-  static const Duration _syncBaseInterval = Duration(seconds: 15);
+  static const Duration _syncBaseInterval = Duration(seconds: 60);
   static const Duration _syncMaxInterval = Duration(minutes: 10);
   int _syncErrorCount = 0;
   bool _appInForeground = true;
@@ -63,9 +63,10 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     _drive.init().ignore();
     // Observe app lifecycle so polling pauses in the background.
     WidgetsBinding.instance.addObserver(this);
-    // Near-realtime sync: poll while signed in, foregrounded, and not in
-    // backoff. Cadence backs off exponentially after errors so a flaky network
-    // or revoked token doesn't hammer Drive (and the battery).
+    // Background sync: poll every minute while signed in, foregrounded, and
+    // not in backoff. Cadence backs off exponentially after errors so a
+    // flaky network or revoked token doesn't hammer Drive (and the battery).
+    // Users can also pull-to-refresh from any screen for an immediate sync.
     _syncTimer = Timer.periodic(_syncBaseInterval, (_) {
       if (!_appInForeground) return;
       if (!driveSignedIn || _syncing || _engine == null) return;
@@ -439,14 +440,28 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     );
   }
 
-  void addDump({required String text, String? tag, String? reminderAt}) {
+  void addDump({
+    required String text,
+    String? tag,
+    String? reminderAt,
+    String type = 'text',
+    String? voiceTranscript,
+  }) {
     final d = _data!;
+    // Auto-tag from the transcript when present so voice dumps inherit smart
+    // routing too (the bare title alone is often too short to classify well).
+    final classifySource =
+        (voiceTranscript != null && voiceTranscript.isNotEmpty)
+        ? voiceTranscript
+        : text;
     final dump = BrainDump(
       id: _id('b'),
+      type: type,
       text: text,
       createdAt: DateTime.now().toIso8601String(),
       reminderAt: reminderAt,
-      tag: (tag == null || tag.isEmpty) ? autoTag(text) : tag,
+      tag: (tag == null || tag.isEmpty) ? autoTag(classifySource) : tag,
+      voiceTranscript: voiceTranscript,
     );
     // Newest first, like the prototype.
     _commit(d.copyWith(braindumps: [dump, ...d.braindumps]));
@@ -538,12 +553,30 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     _commit(next);
   }
 
-  /// Per-100g nutrition for [mealName]: the user's learned value if present,
-  /// otherwise the bundled offline catalog. Null when the meal is unknown.
+  /// Per-100g nutrition for [mealName]. Lookup order:
+  /// 1. A `MealTemplate` matching the name case-insensitively — explicit
+  ///    user-defined preset wins.
+  /// 2. The legacy learned `mealNutrition` map (kept for backwards compat
+  ///    with installs that pre-date the templates feature). New code paths
+  ///    should prefer templates.
+  /// Returns null if nothing matches.
   MealNutrition? nutritionFor(String mealName) {
     final key = mealName.trim().toLowerCase();
     if (key.isEmpty) return null;
-    return _data?.mealNutrition[key] ?? kMealNutrition[key];
+    final d = _data;
+    if (d == null) return null;
+    for (final t in d.mealTemplates) {
+      if (t.name.toLowerCase() == key) {
+        return MealNutrition(
+          kcalPer100: t.kcalPer100,
+          proteinPer100: t.proteinPer100,
+          carbsPer100: t.carbsPer100,
+          fatPer100: t.fatPer100,
+          servingG: t.defaultServingG,
+        );
+      }
+    }
+    return d.mealNutrition[key];
   }
 
   /// Roll [b]'s running macro totals back by [meals]' contribution (the inverse
@@ -746,6 +779,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     required int startMin,
     required int endMin,
     String color = 'amber',
+    List<String>? checklist,
   }) {
     final d = _data!;
     final canonName = _canonical(SuggestionField.session, name);
@@ -758,7 +792,8 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
       // Seed the alert lead-time from the profile's "Default lead-time" so that
       // setting actually drives new zones; it stays per-zone editable after.
       alertBefore: d.profile.notifications.leadTime,
-      checklist: const ['HTF bias set', 'News checked', 'Risk defined'],
+      checklist: checklist ??
+          const ['HTF bias set', 'News checked', 'Risk defined'],
     );
     _commit(
       _remember(
@@ -886,6 +921,145 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     _commit(_data!.copyWith(profile: p.copyWith(dailyReviewTime: hhmm)));
   }
 
+  /// Bulk-update the personal-identity fields from the Edit profile screen.
+  /// All args are optional; only provided fields are written. Pass empty
+  /// strings / zeros to clear a field (the model treats those as "unset").
+  void updateProfileIdentity({
+    String? displayName,
+    String? email,
+    String? avatarColor,
+    String? dob,
+    String? sex,
+    num? heightCm,
+    num? weightKg,
+    String? defaultCurrency,
+    String? units,
+  }) {
+    final p = _data!.profile;
+    _commit(
+      _data!.copyWith(
+        profile: p.copyWith(
+          displayName: displayName,
+          email: email,
+          avatarColor: avatarColor,
+          dob: dob,
+          sex: sex,
+          heightCm: heightCm,
+          weightKg: weightKg,
+          defaultCurrency: defaultCurrency,
+          units: units,
+        ),
+      ),
+    );
+  }
+
+  /// Toggle whether [tabIndex] (1..5) appears in the bottom-nav middle strip.
+  /// Pinned tabs always render in the order declared in [kAllMiddleTabIndices]
+  /// (Trading → Body) so the layout stays predictable when toggling.
+  void toggleNavPin(int tabIndex) {
+    if (tabIndex < 1 || tabIndex > 5) return;
+    final p = _data!.profile;
+    final next = [...p.pinnedNavTabs];
+    if (next.contains(tabIndex)) {
+      next.remove(tabIndex);
+    } else {
+      next.add(tabIndex);
+      next.sort(); // preserve canonical (left-to-right) order
+    }
+    _commit(_data!.copyWith(profile: p.copyWith(pinnedNavTabs: next)));
+  }
+
+  /// Toggle whether the dashboard tile keyed by [tileKey] is rendered. Order
+  /// in the persisted list is irrelevant — the dashboard renders tiles in
+  /// canonical layout order and skips any whose key is absent.
+  void toggleHomeTile(String tileKey) {
+    final p = _data!.profile;
+    final next = [...p.pinnedHomeTiles];
+    if (next.contains(tileKey)) {
+      next.remove(tileKey);
+    } else {
+      next.add(tileKey);
+    }
+    _commit(_data!.copyWith(profile: p.copyWith(pinnedHomeTiles: next)));
+  }
+
+  // ── Templates (user-defined presets per tab) ────────────────────────
+  // Generic CRUD: each typed method below is a thin wrapper so call sites
+  // stay self-documenting and the storage selectors are co-located.
+
+  void saveMealTemplate(MealTemplate t) =>
+      _upsert<MealTemplate>(_data!.mealTemplates, t, (next) =>
+          _commit(_data!.copyWith(mealTemplates: next)));
+  void removeMealTemplate(String id) => _commit(_data!.copyWith(
+      mealTemplates:
+          _data!.mealTemplates.where((t) => t.id != id).toList()));
+
+  void saveWorkoutTemplate(WorkoutTemplate t) =>
+      _upsert<WorkoutTemplate>(_data!.workoutTemplates, t, (next) =>
+          _commit(_data!.copyWith(workoutTemplates: next)));
+  void removeWorkoutTemplate(String id) => _commit(_data!.copyWith(
+      workoutTemplates:
+          _data!.workoutTemplates.where((t) => t.id != id).toList()));
+
+  void saveGroceryTemplate(GroceryTemplate t) =>
+      _upsert<GroceryTemplate>(_data!.groceryTemplates, t, (next) =>
+          _commit(_data!.copyWith(groceryTemplates: next)));
+  void removeGroceryTemplate(String id) => _commit(_data!.copyWith(
+      groceryTemplates:
+          _data!.groceryTemplates.where((t) => t.id != id).toList()));
+
+  void savePantryTemplate(PantryTemplate t) =>
+      _upsert<PantryTemplate>(_data!.pantryTemplates, t, (next) =>
+          _commit(_data!.copyWith(pantryTemplates: next)));
+  void removePantryTemplate(String id) => _commit(_data!.copyWith(
+      pantryTemplates:
+          _data!.pantryTemplates.where((t) => t.id != id).toList()));
+
+  void saveSubscriptionTemplate(SubscriptionTemplate t) =>
+      _upsert<SubscriptionTemplate>(_data!.subscriptionTemplates, t, (next) =>
+          _commit(_data!.copyWith(subscriptionTemplates: next)));
+  void removeSubscriptionTemplate(String id) => _commit(_data!.copyWith(
+      subscriptionTemplates:
+          _data!.subscriptionTemplates.where((t) => t.id != id).toList()));
+
+  void saveKillzoneTemplate(KillzoneTemplate t) =>
+      _upsert<KillzoneTemplate>(_data!.killzoneTemplates, t, (next) =>
+          _commit(_data!.copyWith(killzoneTemplates: next)));
+  void removeKillzoneTemplate(String id) => _commit(_data!.copyWith(
+      killzoneTemplates:
+          _data!.killzoneTemplates.where((t) => t.id != id).toList()));
+
+  void saveFlowTemplate(FlowTemplate t) =>
+      _upsert<FlowTemplate>(_data!.flowTemplates, t, (next) =>
+          _commit(_data!.copyWith(flowTemplates: next)));
+  void removeFlowTemplate(String id) => _commit(_data!.copyWith(
+      flowTemplates:
+          _data!.flowTemplates.where((t) => t.id != id).toList()));
+
+  /// Insert if [item.id] is new, otherwise replace in place — keeps the user's
+  /// preferred order across edits. The typed wrappers above thread the right
+  /// list + commit callback so this stays a one-liner.
+  void _upsert<T>(
+    List<T> list,
+    T item,
+    void Function(List<T> next) commit,
+  ) {
+    // Templates have `id` declared as a String field; pattern-match it from
+    // the generic via `dynamic`. Keeps the helper from needing a base class.
+    final id = (item as dynamic).id as String;
+    final next = [...list];
+    final idx = next.indexWhere((e) => (e as dynamic).id == id);
+    if (idx >= 0) {
+      next[idx] = item;
+    } else {
+      next.add(item);
+    }
+    commit(next);
+  }
+
+  /// Convenience id factory for new templates (matches existing pattern).
+  String newTemplateId(String prefix) => _id(prefix);
+
   /// Wipe everything back to the seed data.
   Future<void> resetToDefaults() async {
     await _commit(AppData.fromJson(buildDefaultData()));
@@ -916,6 +1090,17 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
 
   /// A tab is editable locally unless it's shared with us view-only.
   bool canEditTab(String tabKey) => _roles[tabKey] != SyncRole.viewer;
+
+  /// True once the first-launch permissions dialog has been shown. The shell
+  /// uses this to pop the dialog exactly once.
+  Future<bool> hasOnboardedPermissions() => _storage.isPermissionsOnboarded();
+  Future<void> markPermissionsOnboarded() =>
+      _storage.markPermissionsOnboarded();
+
+  /// True once the welcome walkthrough has been completed (or skipped) at
+  /// least once. The shell uses this to gate the auto-popup.
+  Future<bool> hasSeenWelcome() => _storage.isWelcomeSeen();
+  Future<void> markWelcomeSeen() => _storage.markWelcomeSeen();
 
   Map<String, Map<String, List<Json>>> _decodeBase(Map<String, dynamic> raw) =>
       {

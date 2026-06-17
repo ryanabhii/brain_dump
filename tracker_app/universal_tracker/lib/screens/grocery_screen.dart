@@ -3,9 +3,12 @@ import 'package:provider/provider.dart';
 
 import '../data/suggestions.dart';
 import '../models/grocery.dart';
+import '../models/templates.dart';
 import '../state/app_state.dart';
 import '../theme/colors.dart';
 import '../utils/grouping.dart';
+import '../widgets/save_as_template_toggle.dart';
+import '../widgets/template_picker.dart';
 import '../widgets/ui.dart';
 
 /// Port of the React `GroceryScreen` (Prototype.tsx line 2022): a shared
@@ -580,6 +583,7 @@ class _GroceryAddSheetState extends State<_GroceryAddSheet> {
   final _qty = TextEditingController(text: '1');
   final _category = TextEditingController();
   bool _recurring = false;
+  bool _alsoTemplate = false;
 
   @override
   void dispose() {
@@ -593,32 +597,62 @@ class _GroceryAddSheetState extends State<_GroceryAddSheet> {
     final name = _name.text.trim();
     if (name.isEmpty) return;
     final messenger = ScaffoldMessenger.of(context);
-    context.read<AppState>().addGroceryItem(
+    final app = context.read<AppState>();
+    final qty = int.tryParse(_qty.text.trim()) ?? 1;
+    final cat = _category.text;
+    app.addGroceryItem(
       name: name,
-      qty: int.tryParse(_qty.text.trim()) ?? 1,
-      category: _category.text,
+      qty: qty,
+      category: cat,
       recurring: _recurring,
     );
+    if (_alsoTemplate) {
+      app.saveGroceryTemplate(
+        GroceryTemplate(
+          id: app.newTemplateId('gt'),
+          name: name,
+          category: cat.trim().isEmpty ? 'Other' : cat.trim(),
+          defaultQty: qty,
+        ),
+      );
+    }
     Navigator.of(context).pop();
     messenger.showSnackBar(
-      const SnackBar(
-        content: Text('Added to list'),
-        duration: Duration(milliseconds: 1200),
+      SnackBar(
+        content: Text(
+          _alsoTemplate ? 'Added · template saved' : 'Added to list',
+        ),
+        duration: const Duration(milliseconds: 1400),
       ),
     );
   }
 
+  void _applyTemplate(GroceryTemplate t) {
+    setState(() {
+      _name.text = t.name;
+      _category.text = t.category;
+      _qty.text = t.defaultQty.toString();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final app = context.watch<AppState>();
     return SheetShell(
       title: 'Add to list',
       children: [
+        TemplatePicker<GroceryTemplate>(
+          templates: app.data!.groceryTemplates,
+          accent: AppColors.emerald400,
+          labelOf: (t) => t.name,
+          subtitleOf: (t) => '${t.category} · ×${t.defaultQty}',
+          iconOf: (_) => Icons.shopping_basket,
+          onPick: _applyTemplate,
+        ),
         AppAutocompleteField(
           controller: _name,
           hint: 'Item (e.g. Milk)',
-          options: context.read<AppState>().suggestionsFor(
-            SuggestionField.grocery,
-          ),
+          options: app.suggestionsFor(SuggestionField.grocery),
         ),
         const SizedBox(height: 12),
         Row(
@@ -635,9 +669,8 @@ class _GroceryAddSheetState extends State<_GroceryAddSheet> {
               child: AppAutocompleteField(
                 controller: _category,
                 hint: 'Category',
-                options: context.read<AppState>().suggestionsFor(
-                  SuggestionField.groceryCategory,
-                ),
+                options:
+                    app.suggestionsFor(SuggestionField.groceryCategory),
               ),
             ),
           ],
@@ -660,7 +693,12 @@ class _GroceryAddSheetState extends State<_GroceryAddSheet> {
             ],
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 12),
+        SaveAsTemplateToggle(
+          value: _alsoTemplate,
+          onChanged: (v) => setState(() => _alsoTemplate = v),
+        ),
+        const SizedBox(height: 12),
         PrimaryButton(label: 'Save', onPressed: _save),
       ],
     );
@@ -678,6 +716,7 @@ class _PantryAddSheetState extends State<_PantryAddSheet> {
   final _qty = TextEditingController(text: '1');
   final _unit = TextEditingController();
   final _threshold = TextEditingController(text: '1');
+  bool _alsoTemplate = false;
 
   @override
   void dispose() {
@@ -692,32 +731,60 @@ class _PantryAddSheetState extends State<_PantryAddSheet> {
     final name = _name.text.trim();
     if (name.isEmpty) return;
     final messenger = ScaffoldMessenger.of(context);
-    context.read<AppState>().addPantryItem(
-      name: name,
-      qty: int.tryParse(_qty.text.trim()) ?? 1,
-      lowThreshold: int.tryParse(_threshold.text.trim()) ?? 1,
-      unit: _unit.text,
-    );
+    final app = context.read<AppState>();
+    final qty = int.tryParse(_qty.text.trim()) ?? 1;
+    final low = int.tryParse(_threshold.text.trim()) ?? 1;
+    final unit = _unit.text;
+    app.addPantryItem(name: name, qty: qty, lowThreshold: low, unit: unit);
+    if (_alsoTemplate) {
+      app.savePantryTemplate(
+        PantryTemplate(
+          id: app.newTemplateId('pt'),
+          name: name,
+          unit: unit.trim().isEmpty ? 'unit' : unit.trim(),
+          lowThreshold: low,
+          defaultStartQty: qty,
+        ),
+      );
+    }
     Navigator.of(context).pop();
     messenger.showSnackBar(
-      const SnackBar(
-        content: Text('Pantry updated'),
-        duration: Duration(milliseconds: 1200),
+      SnackBar(
+        content: Text(
+          _alsoTemplate ? 'Pantry updated · template saved' : 'Pantry updated',
+        ),
+        duration: const Duration(milliseconds: 1400),
       ),
     );
   }
 
+  void _applyTemplate(PantryTemplate t) {
+    setState(() {
+      _name.text = t.name;
+      _unit.text = t.unit;
+      _qty.text = t.defaultStartQty.toString();
+      _threshold.text = t.lowThreshold.toString();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final app = context.watch<AppState>();
     return SheetShell(
       title: 'Add to pantry',
       children: [
+        TemplatePicker<PantryTemplate>(
+          templates: app.data!.pantryTemplates,
+          accent: AppColors.amber400,
+          labelOf: (t) => t.name,
+          subtitleOf: (t) => '${t.unit} · low ≤ ${t.lowThreshold}',
+          iconOf: (_) => Icons.inventory_2,
+          onPick: _applyTemplate,
+        ),
         AppAutocompleteField(
           controller: _name,
           hint: 'Pantry item',
-          options: context.read<AppState>().suggestionsFor(
-            SuggestionField.grocery,
-          ),
+          options: app.suggestionsFor(SuggestionField.grocery),
         ),
         const SizedBox(height: 12),
         Row(
@@ -734,9 +801,7 @@ class _PantryAddSheetState extends State<_PantryAddSheet> {
               child: AppAutocompleteField(
                 controller: _unit,
                 hint: 'Unit (bottle, kg…)',
-                options: context.read<AppState>().suggestionsFor(
-                  SuggestionField.unit,
-                ),
+                options: app.suggestionsFor(SuggestionField.unit),
               ),
             ),
           ],
@@ -747,7 +812,12 @@ class _PantryAddSheetState extends State<_PantryAddSheet> {
           hint: 'Alert when at or below',
           keyboardType: TextInputType.number,
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 12),
+        SaveAsTemplateToggle(
+          value: _alsoTemplate,
+          onChanged: (v) => setState(() => _alsoTemplate = v),
+        ),
+        const SizedBox(height: 12),
         PrimaryButton(label: 'Save', onPressed: _save),
       ],
     );

@@ -25,6 +25,7 @@ dependencies:
   googleapis: ^16.0.0
   extension_google_sign_in_as_googleapis_auth: ^3.0.0
   http: ^1.6.0
+  speech_to_text: ^7.4.0
 
 dev_dependencies:
   flutter_test:

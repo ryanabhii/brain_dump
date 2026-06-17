@@ -1,13 +1,20 @@
-/// A captured thought — text now, video later (the video feature is deferred,
-/// so its payload is preserved opaquely in [video] without being modelled yet).
+/// A captured thought — text, or a voice note transcribed on-device. The
+/// legacy `video` payload is preserved opaquely without being modelled yet,
+/// since that feature is still deferred.
 class BrainDump {
   final String id;
-  final String type; // 'text' | 'video'
+  final String type; // 'text' | 'voice' | 'video'
   final String text;
   final String createdAt; // ISO-8601
   final String? reminderAt; // ISO-8601, optional
   final bool completed;
   final String tag; // personal | work | trading | idea
+
+  /// Full speech-to-text transcript captured when [type] is `voice`.
+  /// [text] holds the user-given title; this preserves what was actually said
+  /// so the card can show a preview and search can match it later.
+  final String? voiceTranscript;
+
   final Map<String, dynamic>? video;
 
   const BrainDump({
@@ -18,6 +25,7 @@ class BrainDump {
     this.reminderAt,
     this.completed = false,
     this.tag = 'personal',
+    this.voiceTranscript,
     this.video,
   });
 
@@ -29,6 +37,7 @@ class BrainDump {
     reminderAt: j['reminderAt'] as String?,
     completed: j['completed'] as bool? ?? false,
     tag: j['tag'] as String? ?? 'personal',
+    voiceTranscript: j['voiceTranscript'] as String?,
     video: j['video'] as Map<String, dynamic>?,
   );
 
@@ -40,6 +49,7 @@ class BrainDump {
     'reminderAt': reminderAt,
     'completed': completed,
     'tag': tag,
+    if (voiceTranscript != null) 'voiceTranscript': voiceTranscript,
     if (video != null) 'video': video,
   };
 
@@ -51,6 +61,7 @@ class BrainDump {
     reminderAt: reminderAt,
     completed: completed ?? this.completed,
     tag: tag ?? this.tag,
+    voiceTranscript: voiceTranscript,
     video: video,
   );
 }

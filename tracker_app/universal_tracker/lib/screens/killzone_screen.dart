@@ -6,9 +6,12 @@ import 'package:provider/provider.dart';
 
 import '../data/suggestions.dart';
 import '../models/killzone.dart';
+import '../models/templates.dart';
 import '../state/app_state.dart';
 import '../theme/colors.dart';
 import '../utils/time_util.dart';
+import '../widgets/save_as_template_toggle.dart';
+import '../widgets/template_picker.dart';
 import '../widgets/trading_pnl.dart';
 import '../widgets/ui.dart';
 
@@ -531,6 +534,8 @@ class _KzAddSheetState extends State<_KzAddSheet> {
   TimeOfDay? _start;
   TimeOfDay? _end;
   String _color = 'amber';
+  List<String>? _checklistOverride;
+  bool _alsoTemplate = false;
 
   static const _colors = ['amber', 'sky', 'rose', 'violet', 'emerald'];
   static Color _swatch(String n) => switch (n) {
@@ -561,19 +566,47 @@ class _KzAddSheetState extends State<_KzAddSheet> {
     final name = _name.text.trim();
     if (name.isEmpty || _start == null || _end == null) return;
     final messenger = ScaffoldMessenger.of(context);
-    context.read<AppState>().addKillzone(
+    final app = context.read<AppState>();
+    final startMin = _start!.hour * 60 + _start!.minute;
+    final endMin = _end!.hour * 60 + _end!.minute;
+    app.addKillzone(
       name: name,
-      startMin: _start!.hour * 60 + _start!.minute,
-      endMin: _end!.hour * 60 + _end!.minute,
+      startMin: startMin,
+      endMin: endMin,
       color: _color,
+      checklist: _checklistOverride,
     );
+    if (_alsoTemplate) {
+      app.saveKillzoneTemplate(
+        KillzoneTemplate(
+          id: app.newTemplateId('kt'),
+          name: name,
+          startMin: startMin,
+          endMin: endMin,
+          color: _color,
+          checklist: _checklistOverride ?? const [],
+        ),
+      );
+    }
     Navigator.of(context).pop();
     messenger.showSnackBar(
-      const SnackBar(
-        content: Text('Killzone added'),
-        duration: Duration(milliseconds: 1200),
+      SnackBar(
+        content: Text(
+          _alsoTemplate ? 'Killzone added · template saved' : 'Killzone added',
+        ),
+        duration: const Duration(milliseconds: 1400),
       ),
     );
+  }
+
+  void _applyTemplate(KillzoneTemplate t) {
+    setState(() {
+      _name.text = t.name;
+      _start = TimeOfDay(hour: t.startMin ~/ 60, minute: t.startMin % 60);
+      _end = TimeOfDay(hour: t.endMin ~/ 60, minute: t.endMin % 60);
+      _color = t.color;
+      _checklistOverride = t.checklist.isEmpty ? null : t.checklist;
+    });
   }
 
   Widget _timeButton(String label, TimeOfDay? value, VoidCallback onTap) {
@@ -601,15 +634,23 @@ class _KzAddSheetState extends State<_KzAddSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final app = context.watch<AppState>();
     return SheetShell(
       title: 'New killzone',
       children: [
+        TemplatePicker<KillzoneTemplate>(
+          templates: app.data!.killzoneTemplates,
+          accent: AppColors.violet400,
+          labelOf: (t) => t.name,
+          subtitleOf: (t) =>
+              '${fmtTime(t.startMin)} – ${fmtTime(t.endMin)}',
+          iconOf: (_) => Icons.trending_up,
+          onPick: _applyTemplate,
+        ),
         AppAutocompleteField(
           controller: _name,
           hint: 'Session name',
-          options: context.read<AppState>().suggestionsFor(
-            SuggestionField.session,
-          ),
+          options: app.suggestionsFor(SuggestionField.session),
         ),
         const SizedBox(height: 12),
         Row(
@@ -646,7 +687,12 @@ class _KzAddSheetState extends State<_KzAddSheet> {
               ),
           ],
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 12),
+        SaveAsTemplateToggle(
+          value: _alsoTemplate,
+          onChanged: (v) => setState(() => _alsoTemplate = v),
+        ),
+        const SizedBox(height: 12),
         PrimaryButton(label: 'Save', onPressed: _save),
       ],
     );

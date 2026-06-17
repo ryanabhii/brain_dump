@@ -8,6 +8,7 @@ import '../state/app_state.dart';
 import '../theme/colors.dart';
 import '../utils/auto_route.dart';
 import '../widgets/ui.dart';
+import '../widgets/voice_recorder.dart';
 
 /// Port of the React `BrainScreen` (Prototype.tsx line 1317): capture quick
 /// thoughts, filter open/done/all, and (the improvement) promote a dump that
@@ -63,7 +64,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
           child: _ActionCard(
             icon: Icons.mic,
             title: 'Quick dump',
-            subtitle: 'Text note',
+            subtitle: 'Type or record',
             tint: AppColors.violet500,
             onTap: () => _openAdd(context),
           ),
@@ -166,18 +167,60 @@ class _DumpCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    item.text,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: item.completed
-                          ? AppColors.zinc500
-                          : AppColors.zinc100,
-                      decoration: item.completed
-                          ? TextDecoration.lineThrough
-                          : null,
-                    ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (item.type == 'voice') ...[
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2, right: 6),
+                          child: Icon(
+                            Icons.mic_rounded,
+                            size: 14,
+                            color: item.completed
+                                ? AppColors.zinc600
+                                : AppColors.violet400,
+                          ),
+                        ),
+                      ],
+                      Expanded(
+                        child: Text(
+                          item.text,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: item.type == 'voice'
+                                ? FontWeight.w600
+                                : FontWeight.w400,
+                            color: item.completed
+                                ? AppColors.zinc500
+                                : AppColors.zinc100,
+                            decoration: item.completed
+                                ? TextDecoration.lineThrough
+                                : null,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
+                  // Voice notes: show a soft "quote" of the transcript so the
+                  // user can recall the full thought without tapping in.
+                  if (item.type == 'voice' &&
+                      item.voiceTranscript != null &&
+                      item.voiceTranscript!.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      item.voiceTranscript!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.4,
+                        color: item.completed
+                            ? AppColors.zinc600
+                            : AppColors.zinc400,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 6),
                   Wrap(
                     spacing: 8,
@@ -399,17 +442,20 @@ class _BrainAddSheetState extends State<_BrainAddSheet> {
     super.dispose();
   }
 
+  String? _reminderAt() => _reminderIdx == null
+      ? null
+      : todayPlus(_reminders[_reminderIdx!].$2);
+
+  /// Text-path save. Voice flow has its own end-to-end handler so the title
+  /// prompt + transcript stay in one place.
   void _save() {
     final text = _text.text.trim();
     if (text.isEmpty) return;
     final messenger = ScaffoldMessenger.of(context);
-    final reminderAt = _reminderIdx == null
-        ? null
-        : todayPlus(_reminders[_reminderIdx!].$2);
     context.read<AppState>().addDump(
       text: text,
       tag: _tag,
-      reminderAt: reminderAt,
+      reminderAt: _reminderAt(),
     );
     Navigator.of(context).pop();
     messenger.showSnackBar(
@@ -420,11 +466,86 @@ class _BrainAddSheetState extends State<_BrainAddSheet> {
     );
   }
 
+  /// Called once the voice recorder stops with a non-empty transcript. Opens
+  /// the title dialog, then commits a `voice`-type dump that carries the
+  /// transcript alongside the user-given title.
+  Future<void> _handleVoiceCapture(String transcript) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final app = context.read<AppState>();
+    final title = await promptForVoiceTitle(
+      context,
+      transcript: transcript,
+      accent: AppColors.violet500,
+    );
+    if (!mounted) return;
+    if (title == null) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Voice note discarded'),
+          duration: Duration(milliseconds: 1200),
+        ),
+      );
+      return;
+    }
+    app.addDump(
+      text: title,
+      tag: _tag,
+      reminderAt: _reminderAt(),
+      type: 'voice',
+      voiceTranscript: transcript,
+    );
+    if (!mounted) return;
+    Navigator.of(context).pop();
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text('Voice note saved 🎙️'),
+        duration: Duration(milliseconds: 1400),
+      ),
+    );
+  }
+
+  void _surfaceVoiceError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return SheetShell(
       title: 'Brain dump',
       children: [
+        // Voice recorder lives above the text field — same modal handles
+        // both capture modes; the user picks whichever feels faster.
+        VoiceRecorder(
+          accent: AppColors.violet500,
+          onStopped: _handleVoiceCapture,
+          onError: _surfaceVoiceError,
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(child: Container(height: 1, color: AppColors.zinc800)),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 10),
+              child: Text(
+                'OR TYPE',
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.2,
+                  color: AppColors.zinc600,
+                ),
+              ),
+            ),
+            Expanded(child: Container(height: 1, color: AppColors.zinc800)),
+          ],
+        ),
+        const SizedBox(height: 12),
         AppTextField(
           controller: _text,
           hint: "What's on your mind?",

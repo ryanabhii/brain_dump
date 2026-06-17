@@ -9,6 +9,8 @@ import '../models/app_data.dart';
 class StorageService {
   static const _key = 'utracker:data:v1';
   static const _syncBaseKey = 'utracker:syncbase:v1';
+  static const _permsOnboardedKey = 'utracker:permsonboarded:v1';
+  static const _welcomeSeenKey = 'utracker:welcomeseen:v1';
 
   Future<AppData> load() async {
     final prefs = await SharedPreferences.getInstance();
@@ -47,5 +49,30 @@ class StorageService {
   Future<void> saveSyncBase(Map<String, dynamic> base) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_syncBaseKey, jsonEncode(base));
+  }
+
+  /// Has the first-launch permissions onboarding been shown? Once true, the
+  /// dialog never auto-pops again — the user can still re-request from Profile.
+  Future<bool> isPermissionsOnboarded() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_permsOnboardedKey) ?? false;
+  }
+
+  Future<void> markPermissionsOnboarded() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_permsOnboardedKey, true);
+  }
+
+  /// Has the user seen the welcome / walkthrough? Once true, it never
+  /// auto-shows again \u2014 the Profile screen has a "Show welcome" entry to
+  /// replay it on demand.
+  Future<bool> isWelcomeSeen() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_welcomeSeenKey) ?? false;
+  }
+
+  Future<void> markWelcomeSeen() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_welcomeSeenKey, true);
   }
 }

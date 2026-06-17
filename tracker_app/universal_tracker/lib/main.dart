@@ -15,6 +15,9 @@ import 'state/app_state.dart';
 import 'theme/app_theme.dart';
 import 'theme/colors.dart';
 import 'widgets/bottom_nav.dart';
+import 'widgets/nav_sidebar.dart';
+import 'widgets/permissions_dialog.dart';
+import 'widgets/welcome_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,21 +38,37 @@ class TrackerApp extends StatelessWidget {
         title: 'Tracker',
         debugShowCheckedModeBanner: false,
         theme: buildAppTheme(),
-        // Adaptive: on phones the app fills the screen; on tablets/desktop/web
-        // it's centred at a comfortable phone width instead of stretching wide.
-        builder: (context, child) => ColoredBox(
-          color: Colors.black,
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 448),
-              child: child ?? const SizedBox.shrink(),
-            ),
-          ),
-        ),
+        // NOTE: we deliberately do NOT clamp width here via `builder:` —
+        // `MaterialApp.builder` wraps the Navigator, so any constraint
+        // applied here would also constrain dialogs (showDatePicker, popup
+        // menus) and cause them to flicker as their AnimatedSize widgets
+        // fight the clamp. The phone-width visual is applied per-route
+        // instead (see [RootShell] + [PhoneWidth] below) so dialogs stay
+        // happily full-screen.
         home: const RootShell(),
       ),
     );
   }
+}
+
+/// Centers its [child] at a comfortable phone width on tablets / desktop /
+/// web, with black gutters either side. Phones (≤448 logical px wide) see
+/// the child fill the screen, identical to before. Apply at the top of each
+/// screen / fullscreen-dialog route's `build`.
+class PhoneWidth extends StatelessWidget {
+  final Widget child;
+  const PhoneWidth({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) => ColoredBox(
+    color: Colors.black,
+    child: Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 448),
+        child: child,
+      ),
+    ),
+  );
 }
 
 /// The app shell: a keep-alive crossfade between screens + bottom navigation.
@@ -63,6 +82,12 @@ class RootShell extends StatefulWidget {
 class _RootShellState extends State<RootShell> {
   int _index = 0; // start on Home
   late final List<Widget> _screens;
+  bool _onboardingStarted = false;
+
+  /// Scaffold key so widgets that aren't descendants of the Scaffold (e.g.
+  /// the bottomNavigationBar's empty-state opener) can still open the drawer
+  /// without needing a Builder hop.
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
@@ -81,6 +106,30 @@ class _RootShellState extends State<RootShell> {
     ];
   }
 
+  /// First-launch onboarding: walkthrough first (so the user knows what each
+  /// permission unlocks), then the permissions dialog. Each step has its own
+  /// persisted "seen" flag so re-running one doesn't trigger the other.
+  void _maybeRunOnboarding(AppState app) {
+    if (_onboardingStarted || app.isLoading) return;
+    _onboardingStarted = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final seenWelcome = await app.hasSeenWelcome();
+      if (!seenWelcome) {
+        if (!mounted) return;
+        await WelcomeScreen.show(
+          context,
+          onDone: () => app.markWelcomeSeen(),
+        );
+      }
+      if (!mounted) return;
+      if (await app.hasOnboardedPermissions()) return;
+      if (!mounted) return;
+      await PermissionsDialog.show(context, firstLaunch: true);
+      await app.markPermissionsOnboarded();
+    });
+  }
+
   void _go(int i) => setState(() => _index = i);
 
   @override
@@ -88,30 +137,66 @@ class _RootShellState extends State<RootShell> {
     final app = context.watch<AppState>();
 
     if (app.isLoading) {
-      return const Scaffold(
-        body: Center(
-          child: Text(
-            'Loading tracker…',
-            style: TextStyle(color: AppColors.zinc500),
+      return const PhoneWidth(
+        child: Scaffold(
+          body: Center(
+            child: Text(
+              'Loading tracker…',
+              style: TextStyle(color: AppColors.zinc500),
+            ),
           ),
         ),
       );
     }
 
-    return Scaffold(
-      body: SafeArea(
-        bottom: false,
-        // All seven screens stay mounted (state preserved); only the active one
-        // is visible + interactive. Switching crossfades between them.
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            for (var i = 0; i < 7; i++)
-              _TabLayer(active: i == _index, child: _screens[i]),
-          ],
+    // First-launch only — schedules the dialog for after this frame.
+    _maybeRunOnboarding(app);
+
+    return PhoneWidth(
+      child: Scaffold(
+        key: _scaffoldKey,
+        // Sidebar with every nav destination + per-tab pin toggle. Wired at
+        // the shell level so swipe-from-left works on every screen, and so
+        // tapping a row can hop tabs without an extra pop.
+        drawer: NavSidebar(currentIndex: _index, onTap: _go),
+        body: SafeArea(
+          bottom: false,
+          // All seven screens stay mounted (state preserved); only the active
+          // one is visible + interactive. Switching crossfades between them.
+          // Wrapped in a RefreshIndicator so pulling down on any tab's
+          // scrollable triggers a manual sync. Inactive tabs are
+          // IgnorePointer'd so only the active scrollable forwards overscroll
+          // notifications.
+          child: RefreshIndicator(
+            onRefresh: () => _manualSync(context),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                for (var i = 0; i < 7; i++)
+                  _TabLayer(active: i == _index, child: _screens[i]),
+              ],
+            ),
+          ),
+        ),
+        bottomNavigationBar: TrackerBottomNav(
+          currentIndex: _index,
+          onTap: _go,
+          onOpenSidebar: () => _scaffoldKey.currentState?.openDrawer(),
         ),
       ),
-      bottomNavigationBar: TrackerBottomNav(currentIndex: _index, onTap: _go),
+    );
+  }
+
+  /// Pull-to-refresh handler: run a sync pass and surface the result. Safe to
+  /// call when signed out (returns "Sign in to sync") or already syncing
+  /// ("Sync in progress…") \u2014 [AppState.syncNow] handles both.
+  Future<void> _manualSync(BuildContext context) async {
+    final app = context.read<AppState>();
+    final messenger = ScaffoldMessenger.of(context);
+    final msg = await app.syncNow();
+    if (!mounted) return;
+    messenger.showSnackBar(
+      SnackBar(content: Text(msg), duration: const Duration(seconds: 2)),
     );
   }
 }

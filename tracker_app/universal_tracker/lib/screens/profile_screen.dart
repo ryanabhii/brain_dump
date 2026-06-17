@@ -11,7 +11,11 @@ import '../state/app_state.dart';
 import '../sync/remote_store.dart';
 import '../sync/sync_tabs.dart';
 import '../theme/colors.dart';
+import '../widgets/permissions_dialog.dart';
 import '../widgets/ui.dart';
+import '../widgets/welcome_screen.dart';
+import 'edit_profile_screen.dart';
+import 'templates_screen.dart';
 
 /// Port of the React `ProfileScreen` (Prototype.tsx line 2557): reminder
 /// settings, household members, and data actions (copy backup + reset).
@@ -56,40 +60,52 @@ class ProfileScreen extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
             children: [
-              // Identity card
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: surfaceCard(),
-                child: Row(
-                  children: [
-                    const CircleAvatar(
-                      radius: 24,
-                      backgroundColor: AppColors.zinc800,
-                      child: Icon(Icons.person, color: AppColors.zinc300),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'You',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
+              // Identity card — tap to open Edit profile.
+              GestureDetector(
+                onTap: () => EditProfileScreen.show(context),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: surfaceCard(),
+                  child: Row(
+                    children: [
+                      _IdentityAvatar(profile: data.profile),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              data.profile.displayName.isEmpty
+                                  ? 'Add your name'
+                                  : data.profile.displayName,
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: data.profile.displayName.isEmpty
+                                    ? AppColors.zinc500
+                                    : AppColors.zinc100,
+                              ),
                             ),
-                          ),
-                          Text(
-                            'Timezone · ${app.localTimezone}',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: AppColors.zinc500,
+                            const SizedBox(height: 2),
+                            Text(
+                              _identitySubtitle(app),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppColors.zinc500,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                      const Icon(
+                        Icons.edit_outlined,
+                        size: 18,
+                        color: AppColors.zinc500,
+                      ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
@@ -308,6 +324,186 @@ class ProfileScreen extends StatelessWidget {
                       onPicked: app.setDailyReviewTime,
                     ),
                   ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // ── Help ──
+              const SectionLabel('Help'),
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: () => WelcomeScreen.show(
+                  context,
+                  onDone: () => app.markWelcomeSeen(),
+                ),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: surfaceCard(),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: AppColors.a(AppColors.cyan500, 0.15),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.help_outline,
+                          size: 18,
+                          color: AppColors.cyan300,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Show welcome',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'Replay the walkthrough for every tab',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: AppColors.zinc500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Icons.chevron_right,
+                        size: 18,
+                        color: AppColors.zinc500,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // ── Templates ──
+              const SectionLabel('Templates'),
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: () => TemplatesScreen.show(context),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: surfaceCard(),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: AppColors.a(AppColors.amber400, 0.18),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.bookmark_border,
+                          size: 18,
+                          color: AppColors.amber400,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Manage templates',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _templatesSubtitle(data),
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppColors.zinc500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Icons.chevron_right,
+                        size: 18,
+                        color: AppColors.zinc500,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // ── Permissions ──
+              const SectionLabel('Permissions'),
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: () => PermissionsDialog.show(context),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: surfaceCard(),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: AppColors.a(AppColors.cyan500, 0.15),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.shield_outlined,
+                          size: 18,
+                          color: AppColors.cyan300,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Request all permissions',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'Notifications and Google Drive sign-in',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: AppColors.zinc500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Icons.chevron_right,
+                        size: 18,
+                        color: AppColors.zinc500,
+                      ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
@@ -761,6 +957,76 @@ class ProfileScreen extends StatelessWidget {
         ),
       );
     }
+  }
+}
+
+/// Subtitle under the identity card: combines email / age / timezone in
+/// whatever order makes sense given which fields are filled in.
+String _identitySubtitle(AppState app) {
+  final p = app.data!.profile;
+  final parts = <String>[];
+  if (p.email.isNotEmpty) parts.add(p.email);
+  final age = p.age;
+  if (age != null) parts.add('$age yrs');
+  parts.add(app.localTimezone);
+  return parts.join(' · ');
+}
+
+/// "12 templates · meals, workouts" — encourages exploration without a long
+/// list of zero-counts.
+String _templatesSubtitle(dynamic data) {
+  final total = (data.mealTemplates as List).length +
+      (data.workoutTemplates as List).length +
+      (data.groceryTemplates as List).length +
+      (data.pantryTemplates as List).length +
+      (data.subscriptionTemplates as List).length +
+      (data.killzoneTemplates as List).length +
+      (data.flowTemplates as List).length;
+  if (total == 0) {
+    return 'Pre-saved entries you can apply with one tap';
+  }
+  return '$total template${total == 1 ? '' : 's'} · tap to manage';
+}
+
+/// Round avatar with initials over a gradient of the user's chosen color.
+class _IdentityAvatar extends StatelessWidget {
+  final dynamic profile; // Profile — kept dynamic to avoid an extra import.
+  const _IdentityAvatar({required this.profile});
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = avatarColorFor(profile.avatarColor as String);
+    final initials = profile.initials as String;
+    return Container(
+      width: 48,
+      height: 48,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [accent, AppColors.a(accent, 0.7)],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.a(accent, 0.35),
+            blurRadius: 14,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      child: Text(
+        initials,
+        style: TextStyle(
+          fontSize: 17,
+          fontWeight: FontWeight.w700,
+          color: accent.computeLuminance() > 0.55
+              ? AppColors.zinc950
+              : Colors.white,
+        ),
+      ),
+    );
   }
 }
 
