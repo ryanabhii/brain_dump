@@ -446,6 +446,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     String? reminderAt,
     String type = 'text',
     String? voiceTranscript,
+    String? voiceAudioPath,
   }) {
     final d = _data!;
     // Auto-tag from the transcript when present so voice dumps inherit smart
@@ -462,6 +463,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
       reminderAt: reminderAt,
       tag: (tag == null || tag.isEmpty) ? autoTag(classifySource) : tag,
       voiceTranscript: voiceTranscript,
+      voiceAudioPath: voiceAudioPath,
     );
     // Newest first, like the prototype.
     _commit(d.copyWith(braindumps: [dump, ...d.braindumps]));

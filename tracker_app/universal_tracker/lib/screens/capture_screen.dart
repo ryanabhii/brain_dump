@@ -1,3 +1,7 @@
+import 'dart:async';
+import 'dart:io';
+
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -199,6 +203,19 @@ class _DumpCard extends StatelessWidget {
                           ),
                         ),
                       ),
+                      // Inline playback for voice dumps that captured audio.
+                      // The button is only rendered when the file is
+                      // present AND still exists on disk — if the user
+                      // wiped storage, we silently degrade to text-only.
+                      if (item.type == 'voice' &&
+                          item.voiceAudioPath != null &&
+                          item.voiceAudioPath!.isNotEmpty)
+                        _VoicePlayButton(
+                          path: item.voiceAudioPath!,
+                          tint: item.completed
+                              ? AppColors.zinc600
+                              : AppColors.violet400,
+                        ),
                     ],
                   ),
                   // Voice notes: show a soft "quote" of the transcript so the
@@ -468,8 +485,12 @@ class _BrainAddSheetState extends State<_BrainAddSheet> {
 
   /// Called once the voice recorder stops with a non-empty transcript. Opens
   /// the title dialog, then commits a `voice`-type dump that carries the
-  /// transcript alongside the user-given title.
-  Future<void> _handleVoiceCapture(String transcript) async {
+  /// transcript and (when available) the locally-saved audio path so the
+  /// user can play it back later.
+  Future<void> _handleVoiceCapture(
+    String transcript,
+    String? audioPath,
+  ) async {
     final messenger = ScaffoldMessenger.of(context);
     final app = context.read<AppState>();
     final title = await promptForVoiceTitle(
@@ -479,6 +500,11 @@ class _BrainAddSheetState extends State<_BrainAddSheet> {
     );
     if (!mounted) return;
     if (title == null) {
+      // User cancelled the title prompt — drop the audio too so we don't
+      // leak orphaned m4a files into the app's documents directory.
+      if (audioPath != null) {
+        unawaited(File(audioPath).delete().catchError((_) => File(audioPath)));
+      }
       messenger.showSnackBar(
         const SnackBar(
           content: Text('Voice note discarded'),
@@ -493,13 +519,18 @@ class _BrainAddSheetState extends State<_BrainAddSheet> {
       reminderAt: _reminderAt(),
       type: 'voice',
       voiceTranscript: transcript,
+      voiceAudioPath: audioPath,
     );
     if (!mounted) return;
     Navigator.of(context).pop();
     messenger.showSnackBar(
-      const SnackBar(
-        content: Text('Voice note saved 🎙️'),
-        duration: Duration(milliseconds: 1400),
+      SnackBar(
+        content: Text(
+          audioPath != null
+              ? 'Voice note saved 🎙️ (tap ▶ to listen)'
+              : 'Voice note saved 🎙️',
+        ),
+        duration: const Duration(milliseconds: 1400),
       ),
     );
   }
@@ -621,4 +652,86 @@ class _ChoiceChip extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// Compact play/pause control rendered inline on voice dump cards. Each
+/// instance owns its own [AudioPlayer] so multiple cards on the same screen
+/// can be toggled independently. The button silently hides itself if the
+/// audio file has been deleted from disk between renders — voice notes are
+/// still useful as text-only entries in that case.
+class _VoicePlayButton extends StatefulWidget {
+  final String path;
+  final Color tint;
+  const _VoicePlayButton({required this.path, required this.tint});
+
+  @override
+  State<_VoicePlayButton> createState() => _VoicePlayButtonState();
+}
+
+class _VoicePlayButtonState extends State<_VoicePlayButton> {
+  final AudioPlayer _player = AudioPlayer();
+  StreamSubscription<PlayerState>? _stateSub;
+  bool _playing = false;
+  bool _fileMissing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Reset back to the play icon when the clip finishes or is otherwise
+    // stopped externally, so the UI never lies about playback state.
+    _stateSub = _player.onPlayerStateChanged.listen((s) {
+      if (!mounted) return;
+      setState(() => _playing = s == PlayerState.playing);
+    });
+    // Probe existence once. We tolerate a race where the file is deleted
+    // later: `play()` will throw and we flip `_fileMissing` then too.
+    File(widget.path).exists().then((exists) {
+      if (!mounted || exists) return;
+      setState(() => _fileMissing = true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _stateSub?.cancel();
+    _player.dispose();
+    super.dispose();
+  }
+
+  Future<void> _toggle() async {
+    if (_fileMissing) return;
+    try {
+      if (_playing) {
+        await _player.pause();
+      } else {
+        // DeviceFileSource handles cross-platform path resolution (the raw
+        // string works on Android/iOS/desktop but not consistently on web).
+        await _player.play(DeviceFileSource(widget.path));
+      }
+    } catch (_) {
+      // File vanished or codec unsupported on this device — hide the button
+      // rather than spamming an error toast on every render.
+      if (mounted) setState(() => _fileMissing = true);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_fileMissing) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: InkResponse(
+        onTap: _toggle,
+        radius: 16,
+        child: Padding(
+          padding: const EdgeInsets.all(4),
+          child: Icon(
+            _playing ? Icons.pause_circle_filled : Icons.play_circle_fill,
+            size: 22,
+            color: widget.tint,
+          ),
+        ),
+      ),
+    );
+  }
 }

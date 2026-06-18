@@ -15,6 +15,12 @@ class BrainDump {
   /// so the card can show a preview and search can match it later.
   final String? voiceTranscript;
 
+  /// Absolute path to the locally-saved m4a recording captured alongside the
+  /// transcript. Lets the user actually listen back to the dump. Null when
+  /// the platform refused to record (e.g. mic held exclusively by the
+  /// on-device recognizer) — the transcript on its own is still useful.
+  final String? voiceAudioPath;
+
   final Map<String, dynamic>? video;
 
   const BrainDump({
@@ -26,6 +32,7 @@ class BrainDump {
     this.completed = false,
     this.tag = 'personal',
     this.voiceTranscript,
+    this.voiceAudioPath,
     this.video,
   });
 
@@ -38,6 +45,7 @@ class BrainDump {
     completed: j['completed'] as bool? ?? false,
     tag: j['tag'] as String? ?? 'personal',
     voiceTranscript: j['voiceTranscript'] as String?,
+    voiceAudioPath: j['voiceAudioPath'] as String?,
     video: j['video'] as Map<String, dynamic>?,
   );
 
@@ -50,6 +58,7 @@ class BrainDump {
     'completed': completed,
     'tag': tag,
     if (voiceTranscript != null) 'voiceTranscript': voiceTranscript,
+    if (voiceAudioPath != null) 'voiceAudioPath': voiceAudioPath,
     if (video != null) 'video': video,
   };
 
@@ -62,6 +71,7 @@ class BrainDump {
     completed: completed ?? this.completed,
     tag: tag ?? this.tag,
     voiceTranscript: voiceTranscript,
+    voiceAudioPath: voiceAudioPath,
     video: video,
   );
 }

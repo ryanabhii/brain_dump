@@ -1,4 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:record/record.dart';
 import 'package:speech_to_text/speech_recognition_error.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
@@ -6,11 +10,18 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 import '../theme/colors.dart';
 
 /// Result of a finished voice capture. [title] is what the user typed in the
-/// "name this note" dialog; [transcript] is the on-device recognition output.
+/// "name this note" dialog; [transcript] is the on-device recognition output;
+/// [audioPath] is the local m4a file the user can play back later (null if
+/// the platform refused to record alongside the recognizer).
 class VoiceCaptureResult {
   final String title;
   final String transcript;
-  const VoiceCaptureResult({required this.title, required this.transcript});
+  final String? audioPath;
+  const VoiceCaptureResult({
+    required this.title,
+    required this.transcript,
+    this.audioPath,
+  });
 }
 
 /// A controllable voice-recorder pill that lives inside a sheet. Tap to
@@ -26,7 +37,9 @@ class VoiceRecorder extends StatefulWidget {
   final Color accent;
 
   /// Called when the user stops recording with a non-empty transcript.
-  final void Function(String transcript) onStopped;
+  /// [audioPath] is the saved local file, or null if recording the audio
+  /// stream failed (the transcript is still useful on its own).
+  final void Function(String transcript, String? audioPath) onStopped;
 
   /// Surface fatal errors (mic denied, no recognizer, etc.). The recorder
   /// reverts to idle internally; this is just for messaging.
@@ -46,10 +59,25 @@ class VoiceRecorder extends StatefulWidget {
 class _VoiceRecorderState extends State<VoiceRecorder>
     with SingleTickerProviderStateMixin {
   final stt.SpeechToText _speech = stt.SpeechToText();
+  // Captures the raw audio in parallel with the recognizer so the user can
+  // listen to the original brain dump later. Best-effort: on some Android
+  // builds the SpeechRecognizer monopolises the mic and `record` returns
+  // empty audio — we surface that as a null `audioPath` rather than failing
+  // the whole capture.
+  final AudioRecorder _recorder = AudioRecorder();
+  String? _audioPath;
   late final AnimationController _pulse;
   bool _initialized = false;
   bool _listening = false;
-  String _partial = ''; // live in-progress text
+  // True only while we're actively recording. Cleared when the user taps
+  // Stop. Used to distinguish a real "user finished" from the platform's
+  // transient `notListening`/`done` events that fire between utterances or
+  // when Android's per-session cap (~1 min) elapses.
+  bool _userStopped = true;
+  // Committed text from already-ended listen sessions. We accumulate here
+  // because each call to `_speech.listen` resets `recognizedWords`.
+  String _finalized = '';
+  String _partial = ''; // live in-progress text for the CURRENT session
   double _level = 0; // 0..1 mic loudness for the pulse animation
 
   @override
@@ -66,9 +94,14 @@ class _VoiceRecorderState extends State<VoiceRecorder>
     _pulse.dispose();
     if (_listening) {
       // Best-effort stop to free the recognizer when the sheet is dismissed
-      // mid-recording. Ignore errors — the platform may already be torn down.
+      // mid-recording. Mark as user-stopped so any in-flight status callback
+      // doesn't try to restart listening on a disposed widget. Ignore errors
+      // — the platform may already be torn down.
+      _userStopped = true;
       _speech.stop().catchError((_) {});
+      _recorder.stop().catchError((_) => null);
     }
+    _recorder.dispose();
     super.dispose();
   }
 
@@ -78,14 +111,47 @@ class _VoiceRecorderState extends State<VoiceRecorder>
       _initialized = await _speech.initialize(
         onError: (SpeechRecognitionError e) {
           if (!mounted) return;
+          // `error_no_match` and `error_speech_timeout` are fired by Android's
+          // SpeechRecognizer during normal pauses in dictation — they are NOT
+          // fatal. Swallow them so we don't spam the user or kill the loop;
+          // the status handler will simply restart the session.
+          if (e.errorMsg == 'error_no_match' ||
+              e.errorMsg == 'error_speech_timeout') {
+            return;
+          }
+          // Anything else is genuine: surface it and end the session so the
+          // UI doesn't get stuck "listening" forever.
+          _userStopped = true;
           widget.onError?.call(_humanizeError(e.errorMsg));
         },
         onStatus: (status) {
           if (!mounted) return;
-          // The platform notifies us when listening ends (timeout or stop).
-          // Reflect that in our flag so the UI returns to idle automatically.
-          if (status == 'notListening' || status == 'done') {
+          // The platform fires `notListening` between utterances and `done`
+          // when its internal session ends (Android caps each `listen()` call
+          // at roughly one minute). Neither means the USER is done. We treat
+          // only an explicit Stop tap (`_userStopped == true`) as terminal;
+          // otherwise we transparently re-arm the recognizer so it behaves
+          // like a continuous dictation surface.
+          if (status != 'done' && status != 'notListening') return;
+          // Commit whatever the just-ended session produced.
+          if (_partial.isNotEmpty) {
+            _finalized = _finalized.isEmpty
+                ? _partial
+                : '$_finalized $_partial';
+            _partial = '';
+          }
+          if (_userStopped) {
             setState(() => _listening = false);
+          } else if (status == 'done') {
+            // Only restart on `done` — `notListening` can fire mid-session
+            // while the recognizer is still actually capturing audio, and
+            // calling `listen()` again then would error out.
+            // ignore: discarded_futures
+            _listenOnce();
+          } else {
+            // notListening but not user-stopped: just refresh the displayed
+            // (now committed) text without flipping the listening flag.
+            setState(() {});
           }
         },
       );
@@ -109,45 +175,150 @@ class _VoiceRecorderState extends State<VoiceRecorder>
     final ready = await _ensureReady();
     if (!ready) return;
     setState(() {
+      _finalized = '';
       _partial = '';
+      _audioPath = null;
+      _userStopped = false;
       _listening = true;
     });
-    await _speech.listen(
-      onResult: (SpeechRecognitionResult r) {
-        if (!mounted) return;
-        setState(() => _partial = r.recognizedWords);
-      },
-      onSoundLevelChange: (lvl) {
-        if (!mounted) return;
-        // speech_to_text reports level in roughly -2..10 dB units; normalize
-        // to 0..1 so the pulse stays visually proportional to volume.
-        final norm = ((lvl + 2) / 12).clamp(0.0, 1.0);
-        setState(() => _level = norm);
-      },
-      // 30s pause-after-speech is plenty for a brain dump; cap total at 5 min.
-      // Both timeouts (and partial results) live on SpeechListenOptions in
-      // v7+; the top-level kwargs are deprecated.
-      listenOptions: stt.SpeechListenOptions(
-        partialResults: true,
-        cancelOnError: true,
-        listenMode: stt.ListenMode.dictation,
-        pauseFor: const Duration(seconds: 4),
-        listenFor: const Duration(minutes: 5),
-      ),
-    );
+    await _startRecording();
+    await _listenOnce();
+  }
+
+  /// Kick off raw-audio capture into a unique file under the app's documents
+  /// directory. Failures are swallowed: transcription is the primary path,
+  /// and a missing audio file is acceptable degradation.
+  Future<void> _startRecording() async {
+    try {
+      if (!await _recorder.hasPermission()) return;
+      final dir = await getApplicationDocumentsDirectory();
+      final voiceDir = Directory('${dir.path}/voice_notes');
+      if (!await voiceDir.exists()) {
+        await voiceDir.create(recursive: true);
+      }
+      final ts = DateTime.now().millisecondsSinceEpoch;
+      final path = '${voiceDir.path}/voice_$ts.m4a';
+      await _recorder.start(
+        // AAC in an MP4 container plays back natively on every target OS.
+        const RecordConfig(encoder: AudioEncoder.aacLc, bitRate: 96000),
+        path: path,
+      );
+      _audioPath = path;
+    } catch (_) {
+      // Mic likely held by SpeechRecognizer on this device build. Keep
+      // _audioPath null and proceed transcript-only.
+      _audioPath = null;
+    }
+  }
+
+  Future<String?> _stopRecording() async {
+    try {
+      if (!await _recorder.isRecording()) return _audioPath;
+      // `stop()` returns the path it actually wrote to (may differ from what
+      // we asked for on web). Prefer it when available.
+      final stoppedAt = await _recorder.stop();
+      return stoppedAt ?? _audioPath;
+    } catch (_) {
+      return _audioPath;
+    }
+  }
+
+  /// Single "arm the recognizer" call. The status handler re-invokes this
+  /// every time the platform ends a session, so a long brain-dump survives
+  /// Android's ~1-minute per-call cap without the user noticing.
+  Future<void> _listenOnce() async {
+    if (_userStopped || !mounted) return;
+    try {
+      await _speech.listen(
+        onResult: (SpeechRecognitionResult r) {
+          if (!mounted) return;
+          // Android's recognizer flips `finalResult: true` at every pause and
+          // then resets `recognizedWords` for the next utterance. If we don't
+          // commit here, the next partial overwrites the previous sentence
+          // and the user sees their earlier words vanish. So: snapshot the
+          // utterance into _finalized as soon as it's marked final.
+          if (r.finalResult) {
+            final words = r.recognizedWords.trim();
+            if (words.isNotEmpty) {
+              setState(() {
+                _finalized = _finalized.isEmpty
+                    ? words
+                    : '$_finalized $words';
+                _partial = '';
+              });
+            } else {
+              setState(() => _partial = '');
+            }
+          } else {
+            setState(() => _partial = r.recognizedWords);
+          }
+        },
+        onSoundLevelChange: (lvl) {
+          if (!mounted) return;
+          // speech_to_text reports level in roughly -2..10 dB units;
+          // normalize to 0..1 so the pulse tracks volume proportionally.
+          final norm = ((lvl + 2) / 12).clamp(0.0, 1.0);
+          setState(() => _level = norm);
+        },
+        // Manual-stop-only model: push both timeouts to the platform max so
+        // the recognizer never voluntarily quits. Anything it still ends
+        // (Android's internal cap, brief silences) is handled by the status
+        // handler restarting `_listenOnce`. `cancelOnError: false` keeps
+        // benign `no_match`/`speech_timeout` events from killing the loop.
+        listenOptions: stt.SpeechListenOptions(
+          partialResults: true,
+          cancelOnError: false,
+          listenMode: stt.ListenMode.dictation,
+          pauseFor: const Duration(minutes: 5),
+          listenFor: const Duration(minutes: 30),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      _userStopped = true;
+      setState(() => _listening = false);
+      widget.onError?.call('Voice recording unavailable: $e');
+    }
   }
 
   Future<void> _stop() async {
     if (!_listening) return;
+    // Set the flag FIRST so the status callback that fires after `stop()`
+    // doesn't try to restart listening.
+    _userStopped = true;
     await _speech.stop();
-    setState(() => _listening = false);
-    final transcript = _partial.trim();
-    if (transcript.isNotEmpty) widget.onStopped(transcript);
+    final savedPath = await _stopRecording();
+    // If the file is empty (mic was monopolised by the recognizer) discard
+    // it so we don't keep zero-byte garbage and don't show a useless play
+    // button later.
+    String? finalPath = savedPath;
+    if (finalPath != null) {
+      try {
+        final f = File(finalPath);
+        if (!await f.exists() || await f.length() == 0) {
+          if (await f.exists()) {
+            await f.delete();
+          }
+          finalPath = null;
+        }
+      } catch (_) {
+        finalPath = null;
+      }
+    }
+    setState(() {
+      _audioPath = finalPath;
+      _listening = false;
+    });
+    final transcript = ('$_finalized $_partial').trim();
+    if (transcript.isNotEmpty) widget.onStopped(transcript, finalPath);
   }
 
   @override
   Widget build(BuildContext context) {
     final accent = widget.accent;
+    // Cumulative text the user sees: previously-committed chunks (from prior
+    // listen sessions) joined with the live partial from the current one.
+    final displayText = ('$_finalized $_partial').trim();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -180,8 +351,8 @@ class _VoiceRecorderState extends State<VoiceRecorder>
                   children: [
                     Text(
                       _listening
-                          ? 'Listening…'
-                          : (_partial.isEmpty
+                          ? 'Listening… tap Stop when done'
+                          : (displayText.isEmpty
                                 ? 'Tap to record'
                                 : 'Recorded · tap to redo'),
                       style: TextStyle(
@@ -192,14 +363,14 @@ class _VoiceRecorderState extends State<VoiceRecorder>
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      _partial.isEmpty
+                      displayText.isEmpty
                           ? 'On-device · no audio is stored'
-                          : _partial,
+                          : displayText,
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 12,
-                        color: _partial.isEmpty
+                        color: displayText.isEmpty
                             ? AppColors.zinc500
                             : AppColors.zinc200,
                         height: 1.4,

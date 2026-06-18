@@ -26,11 +26,28 @@ dependencies:
   extension_google_sign_in_as_googleapis_auth: ^3.0.0
   http: ^1.6.0
   speech_to_text: ^7.4.0
+  # Local audio capture (saved alongside the on-device transcript so the user
+  # can both read and listen to a brain dump later) and playback for the
+  # saved m4a files. `path_provider` gives us a cross-platform docs dir.
+  record: ^5.1.2
+  audioplayers: ^6.1.0
+  path_provider: ^2.1.4
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+
+# Pin the Linux implementation of `record` to a version that actually
+# implements the resolved `record_platform_interface` (1.6.0). Without this
+# override, pub resolves to `record_linux 0.7.2` (~2 years stale, missing
+# `startStream` and the new `hasPermission({request})` signature), which
+# breaks `flutter build` on every platform — the Linux impl is compiled
+# even for Android targets. `^1.3.1` keeps us inside the 1.x series so we
+# don't accidentally jump to 2.x (which requires `record_platform_interface`
+# 2.x and would yank the rest of the family out from under us).
+dependency_overrides:
+  record_linux: ^1.3.1
 
 flutter:
   uses-material-design: true
