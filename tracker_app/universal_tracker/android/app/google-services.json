@@ -30,6 +30,14 @@
           }
         },
         {
+          "client_id": "556061044868-t3jfsi12sa4gefmcnctqgdistr2dn2nf.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.xenon54.tracker",
+            "certificate_hash": "853a4caa2195b27a5d95e11a61652df99906f77c"
+          }
+        },
+        {
           "client_id": "556061044868-atcnokuocnhu0ai5bqce5j2sddjr8pm9.apps.googleusercontent.com",
           "client_type": 3
         }
