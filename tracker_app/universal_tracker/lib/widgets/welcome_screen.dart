@@ -99,12 +99,11 @@ const List<WelcomePage> kWelcomePages = [
     icon: Icons.shopping_cart,
     accent: AppColors.emerald400,
     title: 'Pantry & Groceries',
-    subtitle:
-        'Shopping list, pantry stock, and household members in one place.',
+    subtitle: 'Shopping list and pantry stock in one place.',
     bullets: [
       'Add items by name + qty. Tap to mark bought.',
       'Pantry tracks stock with a low-threshold — one tap moves it to the list.',
-      'Multiple members? Cycle who an item is for with a tap.',
+      'Weekly recurring items are re-added automatically.',
     ],
     navHint: 'Pantry',
   ),

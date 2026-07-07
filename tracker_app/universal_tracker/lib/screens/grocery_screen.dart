@@ -12,8 +12,8 @@ import '../widgets/template_picker.dart';
 import '../widgets/ui.dart';
 
 /// Port of the React `GroceryScreen` (Prototype.tsx line 2022): a shared
-/// shopping list (grouped by category, with member assignment + weekly
-/// recurring) and a pantry view with low-stock alerts.
+/// shopping list (grouped by category, with weekly recurring) and a pantry
+/// view with low-stock alerts.
 class GroceryScreen extends StatefulWidget {
   const GroceryScreen({super.key});
 
@@ -23,13 +23,6 @@ class GroceryScreen extends StatefulWidget {
 
 class _GroceryScreenState extends State<GroceryScreen> {
   String _view = 'list'; // 'list' | 'pantry'
-
-  Color _memberColor(String m) => switch (m) {
-    'You' => AppColors.cyan400,
-    'Sam' => AppColors.emerald400,
-    'Alex' => AppColors.amber400,
-    _ => AppColors.zinc400,
-  };
 
   @override
   Widget build(BuildContext context) {
@@ -46,11 +39,11 @@ class _GroceryScreenState extends State<GroceryScreen> {
           padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
           child: Row(
             children: [
-              Expanded(
+              const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Household',
                       style: TextStyle(
                         fontSize: 26,
@@ -58,10 +51,10 @@ class _GroceryScreenState extends State<GroceryScreen> {
                         letterSpacing: -0.5,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    SizedBox(height: 2),
                     Text(
-                      'Shared with ${g.members.length} people',
-                      style: const TextStyle(
+                      'Groceries · Pantry',
+                      style: TextStyle(
                         fontSize: 13,
                         color: AppColors.zinc500,
                       ),
@@ -77,11 +70,6 @@ class _GroceryScreenState extends State<GroceryScreen> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: _segmented(pending.length, lowStock),
-        ),
-        const SizedBox(height: 16),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: _membersRow(g.members),
         ),
         const SizedBox(height: 16),
         Expanded(
@@ -168,30 +156,6 @@ class _GroceryScreenState extends State<GroceryScreen> {
     );
   }
 
-  Widget _membersRow(List<String> members) {
-    return Row(
-      children: [
-        const SectionLabel('Household:'),
-        const SizedBox(width: 8),
-        for (final m in members)
-          Padding(
-            padding: const EdgeInsets.only(right: 4),
-            child: CircleAvatar(
-              radius: 12,
-              backgroundColor: AppColors.a(_memberColor(m), 0.25),
-              child: Text(
-                m[0],
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: _memberColor(m),
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
 
   // ── List view ─────────────────────────────────────────────
   Widget _listView(
@@ -226,7 +190,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
             child: SectionLabel(cat),
           ),
           for (final it in byCat[cat]!) ...[
-            _GroceryRow(item: it, color: _memberColor(it.addedBy)),
+            _GroceryRow(item: it),
             const SizedBox(height: 8),
           ],
           const SizedBox(height: 8),
@@ -326,8 +290,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
 // ── A single shopping-list row ─────────────────────────────────
 class _GroceryRow extends StatelessWidget {
   final GroceryItem item;
-  final Color color;
-  const _GroceryRow({required this.item, required this.color});
+  const _GroceryRow({required this.item});
 
   @override
   Widget build(BuildContext context) {
@@ -382,24 +345,6 @@ class _GroceryRow extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 10,
                         color: AppColors.zinc500,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: () => app.cycleMember(item.id),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 1,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.a(color, 0.2),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          item.addedBy,
-                          style: TextStyle(fontSize: 10, color: color),
-                        ),
                       ),
                     ),
                     const SizedBox(width: 8),

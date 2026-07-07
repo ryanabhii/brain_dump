@@ -18,7 +18,7 @@ import 'edit_profile_screen.dart';
 import 'templates_screen.dart';
 
 /// Port of the React `ProfileScreen` (Prototype.tsx line 2557): reminder
-/// settings, household members, and data actions (copy backup + reset).
+/// settings and data actions (copy backup + reset).
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
@@ -508,103 +508,6 @@ class ProfileScreen extends StatelessWidget {
               ),
               const SizedBox(height: 20),
 
-              // ── Household ──
-              const SectionLabel('Household'),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: surfaceCard(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Members',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        for (final m in data.groceries.members)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.zinc800,
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  m,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.zinc300,
-                                  ),
-                                ),
-                                if (data.groceries.members.length > 1) ...[
-                                  const SizedBox(width: 6),
-                                  GestureDetector(
-                                    onTap: () => app.removeMember(m),
-                                    child: const Icon(
-                                      Icons.close,
-                                      size: 12,
-                                      color: AppColors.zinc500,
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                        GestureDetector(
-                          onTap: () => _addMember(context, app),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.a(AppColors.cyan500, 0.15),
-                              borderRadius: BorderRadius.circular(999),
-                              border: Border.all(
-                                color: AppColors.a(AppColors.cyan500, 0.3),
-                              ),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.add,
-                                  size: 12,
-                                  color: AppColors.cyan300,
-                                ),
-                                SizedBox(width: 4),
-                                Text(
-                                  'Add',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.cyan300,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-
               // ── Data ──
               const SectionLabel('Data'),
               const SizedBox(height: 8),
@@ -912,16 +815,6 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _addMember(BuildContext context, AppState app) async {
-    // Use a StatefulWidget so the TextEditingController is owned by the widget
-    // and disposed only after the dialog's exit animation completes — not
-    // immediately after showDialog() returns (which races with the animation).
-    final name = await showDialog<String>(
-      context: context,
-      builder: (_) => const _AddMemberDialog(),
-    );
-    if (name != null && name.isNotEmpty) app.addMember(name);
-  }
 
   Future<void> _confirmReset(BuildContext context, AppState app) async {
     final messenger = ScaffoldMessenger.of(context);
@@ -1229,51 +1122,3 @@ class _PillButton extends StatelessWidget {
   );
 }
 
-// ── Add-member dialog ──────────────────────────────────────────
-/// Owns its [TextEditingController] so the controller is disposed only after
-/// the dialog's exit animation completes, not immediately when [showDialog]
-/// resolves (which would race with the animation and crash on rebuild).
-class _AddMemberDialog extends StatefulWidget {
-  const _AddMemberDialog();
-
-  @override
-  State<_AddMemberDialog> createState() => _AddMemberDialogState();
-}
-
-class _AddMemberDialogState extends State<_AddMemberDialog> {
-  final _controller = TextEditingController();
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: AppColors.zinc900,
-      title: const Text('Add member'),
-      content: TextField(
-        controller: _controller,
-        autofocus: true,
-        style: const TextStyle(color: AppColors.zinc100),
-        decoration: const InputDecoration(
-          hintText: 'Name',
-          hintStyle: TextStyle(color: AppColors.zinc600),
-        ),
-        onSubmitted: (v) => Navigator.pop(context, v.trim()),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        TextButton(
-          onPressed: () => Navigator.pop(context, _controller.text.trim()),
-          child: const Text('Add'),
-        ),
-      ],
-    );
-  }
-}

@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -162,6 +161,7 @@ class _RootShellState extends State<RootShell> {
         if (!mounted) return;
         try {
           if (!await app.hasOnboardedPermissions()) {
+            if (!mounted) return;
             await PermissionsDialog.show(context, firstLaunch: true);
             await app.markPermissionsOnboarded();
           }

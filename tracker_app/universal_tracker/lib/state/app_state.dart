@@ -286,7 +286,6 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
       name: _canonical(SuggestionField.grocery, name),
       qty: qty,
       category: canonCat.isEmpty ? 'Other' : canonCat,
-      addedBy: 'You',
       recurring: recurring ? 'weekly' : null,
     );
     var next = _data!.copyWith(groceries: g.copyWith(list: [...g.list, item]));
@@ -295,54 +294,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     _commit(next);
   }
 
-  /// Add a household member (deduped case-insensitively).
-  void addMember(String name) {
-    final n = name.trim();
-    if (n.isEmpty) return;
-    final g = _data!.groceries;
-    if (g.members.any((m) => m.toLowerCase() == n.toLowerCase())) return;
-    _commit(_data!.copyWith(groceries: g.copyWith(members: [...g.members, n])));
-  }
 
-  /// Remove a household member and reassign their items to a remaining member.
-  /// Keeps at least one member.
-  void removeMember(String name) {
-    final g = _data!.groceries;
-    if (g.members.length <= 1 || !g.members.contains(name)) return;
-    final remaining = g.members.where((m) => m != name).toList();
-    final fallback = remaining.first;
-    _commit(
-      _data!.copyWith(
-        groceries: g.copyWith(
-          members: remaining,
-          list: g.list
-              .map(
-                (it) =>
-                    it.addedBy == name ? it.copyWith(addedBy: fallback) : it,
-              )
-              .toList(),
-        ),
-      ),
-    );
-  }
-
-  /// Reassign an item to the next household member (tap to cycle).
-  void cycleMember(String id) {
-    final g = _data!.groceries;
-    if (g.members.isEmpty) return;
-    _commit(
-      _data!.copyWith(
-        groceries: g.copyWith(
-          list: g.list.map((it) {
-            if (it.id != id) return it;
-            final idx = g.members.indexOf(it.addedBy);
-            final next = g.members[(idx + 1) % g.members.length];
-            return it.copyWith(addedBy: next);
-          }).toList(),
-        ),
-      ),
-    );
-  }
 
   void toggleRecurring(String id) {
     final g = _data!.groceries;
@@ -358,7 +310,6 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
                     name: it.name,
                     qty: it.qty,
                     category: it.category,
-                    addedBy: it.addedBy,
                     completed: it.completed,
                     recurring: null,
                   )
@@ -435,7 +386,6 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
       name: p.name,
       qty: qty,
       category: 'Pantry',
-      addedBy: 'You',
     );
     _commit(_data!.copyWith(groceries: g.copyWith(list: [...g.list, item])));
     return true;
@@ -533,7 +483,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
         )
         .trim();
     final name = cleaned.length > 40 ? cleaned.substring(0, 40) : cleaned;
-    final item = GroceryItem(id: _id('g'), name: name, addedBy: 'You');
+    final item = GroceryItem(id: _id('g'), name: name);
     _commit(
       d.copyWith(
         braindumps: d.braindumps

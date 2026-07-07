@@ -16,7 +16,7 @@ installed. Commands assume the repo is cloned and you are inside
 ## 1. Create the upload keystore (one-time)
 
 ```
-keytool -genkey -v -keystore C:\keystores\xenon54-tracker.jks -keyalg RSA -keysize 2048 -validity 10000 -alias xenon54-tracker
+& "C:\Program Files\Java\jdk-25.0.3\bin\keytool.exe" -genkey -v -keystore C:\keystores\xenon54-tracker.jks -keyalg RSA -keysize 2048 -validity 100000 -alias xenon54-tracker
 ```
 
 - Store the `.jks` file **outside the repo** and back it up (password manager
@@ -40,7 +40,7 @@ Google Sign-In only works for registered certificates. Skipping this gives
 1. Print the fingerprint:
 
    ```
-   keytool -list -v -keystore C:\keystores\xenon54-tracker.jks -alias xenon54-tracker
+  & "C:\Program Files\Java\jdk-25.0.3\bin\keytool.exe" -list -v -keystore C:\keystores\xenon54-tracker.jks -alias xenon54-tracker
    ```
 
    Copy the `SHA1:` line.

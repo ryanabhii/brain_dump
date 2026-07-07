@@ -14,27 +14,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "556061044868-86b7bfig582enfo804g0vdjkqkn61d1m.apps.googleusercontent.com",
+          "client_id": "556061044868-m703m20sj80m8qc3t9h8l6cu0mc6mjm1.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.xenon54.tracker",
-            "certificate_hash": "b043ee75b26a92f592045a88f4e7eb4da2c1de52"
-          }
-        },
-        {
-          "client_id": "556061044868-jijvi7kros6tfdav1hnucd05hfkf03i7.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.xenon54.tracker",
-            "certificate_hash": "2c8f6cba07ba3aede1a91df2272ca8ee2f962d2c"
-          }
-        },
-        {
-          "client_id": "556061044868-t3jfsi12sa4gefmcnctqgdistr2dn2nf.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.xenon54.tracker",
-            "certificate_hash": "853a4caa2195b27a5d95e11a61652df99906f77c"
+            "certificate_hash": "f5c7c4857a9fe3814dffe6e30e09c1de261a9292"
           }
         },
         {

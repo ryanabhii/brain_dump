@@ -4,7 +4,6 @@ class GroceryItem {
   final String name;
   final int qty;
   final String category;
-  final String addedBy;
   final bool completed;
   final String? recurring; // 'weekly' or null
 
@@ -16,7 +15,6 @@ class GroceryItem {
     required this.name,
     this.qty = 1,
     this.category = 'Other',
-    this.addedBy = 'You',
     this.completed = false,
     this.recurring,
     this.updatedAt,
@@ -27,7 +25,6 @@ class GroceryItem {
     name: j['name'] as String,
     qty: (j['qty'] as num?)?.toInt() ?? 1,
     category: j['category'] as String? ?? 'Other',
-    addedBy: j['addedBy'] as String? ?? 'You',
     completed: j['completed'] as bool? ?? false,
     recurring: j['recurring'] as String?,
     updatedAt: j['updatedAt'] as String?,
@@ -38,7 +35,6 @@ class GroceryItem {
     'name': name,
     'qty': qty,
     'category': category,
-    'addedBy': addedBy,
     'completed': completed,
     'recurring': recurring,
     if (updatedAt != null) 'updatedAt': updatedAt,
@@ -48,7 +44,6 @@ class GroceryItem {
     String? name,
     int? qty,
     String? category,
-    String? addedBy,
     bool? completed,
     String? recurring,
   }) => GroceryItem(
@@ -56,7 +51,6 @@ class GroceryItem {
     name: name ?? this.name,
     qty: qty ?? this.qty,
     category: category ?? this.category,
-    addedBy: addedBy ?? this.addedBy,
     completed: completed ?? this.completed,
     recurring: recurring ?? this.recurring,
     updatedAt: updatedAt,
@@ -119,17 +113,15 @@ class PantryItem {
   );
 }
 
-/// The whole "household" section: shopping list, pantry, members.
+/// The whole household section: shopping list and pantry.
 class Groceries {
   final List<GroceryItem> list;
   final List<PantryItem> pantry;
-  final List<String> members;
   final String? lastRecurringRun;
 
   const Groceries({
     this.list = const [],
     this.pantry = const [],
-    this.members = const ['You'],
     this.lastRecurringRun,
   });
 
@@ -140,28 +132,22 @@ class Groceries {
     pantry: (j['pantry'] as List? ?? const [])
         .map((e) => PantryItem.fromJson(e as Map<String, dynamic>))
         .toList(),
-    members: (j['members'] as List? ?? const ['You'])
-        .map((e) => e as String)
-        .toList(),
     lastRecurringRun: j['lastRecurringRun'] as String?,
   );
 
   Map<String, dynamic> toJson() => {
     'list': list.map((e) => e.toJson()).toList(),
     'pantry': pantry.map((e) => e.toJson()).toList(),
-    'members': members,
     'lastRecurringRun': lastRecurringRun,
   };
 
   Groceries copyWith({
     List<GroceryItem>? list,
     List<PantryItem>? pantry,
-    List<String>? members,
     String? lastRecurringRun,
   }) => Groceries(
     list: list ?? this.list,
     pantry: pantry ?? this.pantry,
-    members: members ?? this.members,
     lastRecurringRun: lastRecurringRun ?? this.lastRecurringRun,
   );
 }
