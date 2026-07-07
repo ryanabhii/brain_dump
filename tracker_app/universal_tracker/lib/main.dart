@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -114,40 +115,60 @@ class _RootShellState extends State<RootShell> {
     _onboardingStarted = true;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
-      // Storage was unreadable at startup: the app recovered by loading
-      // defaults, keeping the original bytes quarantined. Never silently —
-      // the user must know their history isn't gone, just unreadable.
-      if (app.dataRecoveredFromCorruption) {
-        await showDialog<void>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Data recovered'),
-            content: const Text(
-              'Your saved data could not be read, so the app started with '
-              'defaults. The unreadable copy has been kept — nothing was '
-              'deleted. Restoring from your Drive backup (Profile → Data) '
-              'will bring your history back.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('OK'),
+      try {
+        // Storage was unreadable at startup: the app recovered by loading
+        // defaults, keeping the original bytes quarantined. Never silently —
+        // the user must know their history isn't gone, just unreadable.
+        if (app.dataRecoveredFromCorruption) {
+          await showDialog<void>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Data recovered'),
+              content: const Text(
+                'Your saved data could not be read, so the app started with '
+                'defaults. The unreadable copy has been kept — nothing was '
+                'deleted. Restoring from your Drive backup (Profile → Data) '
+                'will bring your history back.',
               ),
-            ],
-          ),
-        );
-      }
-      if (!mounted) return;
-      final seenWelcome = await app.hasSeenWelcome();
-      if (!seenWelcome) {
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+        }
         if (!mounted) return;
-        await WelcomeScreen.show(context, onDone: () => app.markWelcomeSeen());
+        final seenWelcome = await app.hasSeenWelcome();
+        if (!seenWelcome) {
+          if (!mounted) return;
+          await WelcomeScreen.show(
+            context,
+            onDone: () => app.markWelcomeSeen(),
+          );
+        }
+        if (!mounted) return;
+        if (await app.hasOnboardedPermissions()) return;
+        if (!mounted) return;
+        await PermissionsDialog.show(context, firstLaunch: true);
+        await app.markPermissionsOnboarded();
+      } catch (e, st) {
+        // Log but don't crash: onboarding is optional. In release mode an
+        // unguarded throw here would silently swallow the error and leave
+        // the user without the welcome screen AND permissions dialog.
+        debugPrint('Onboarding error: $e\n$st');
+        // Still try to show the permissions dialog even if welcome failed.
+        if (!mounted) return;
+        try {
+          if (!await app.hasOnboardedPermissions()) {
+            await PermissionsDialog.show(context, firstLaunch: true);
+            await app.markPermissionsOnboarded();
+          }
+        } catch (e2) {
+          debugPrint('Permissions dialog error: $e2');
+        }
       }
-      if (!mounted) return;
-      if (await app.hasOnboardedPermissions()) return;
-      if (!mounted) return;
-      await PermissionsDialog.show(context, firstLaunch: true);
-      await app.markPermissionsOnboarded();
     });
   }
 

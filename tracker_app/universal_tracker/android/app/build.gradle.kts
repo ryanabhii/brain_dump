@@ -21,8 +21,7 @@ if (keystorePropertiesFile.exists()) {
 android {
     namespace = "com.xenon54.tracker"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
-
+    ndkVersion = "29.0.13113456"  // highest required by any plugin (whisper_ggml); NDK is backward-compatible
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
