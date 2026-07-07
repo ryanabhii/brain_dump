@@ -951,8 +951,7 @@ class _MealAddSheetState extends State<_MealAddSheet> {
           templates: mealTemplates,
           accent: AppColors.cyan500,
           labelOf: (t) => t.name,
-          subtitleOf: (t) =>
-              '${t.kcalPer100.toStringAsFixed(0)} kcal/100g',
+          subtitleOf: (t) => '${t.kcalPer100.toStringAsFixed(0)} kcal/100g',
           iconOf: (_) => Icons.restaurant,
           onPick: _applyMealTemplate,
         ),
@@ -1066,10 +1065,9 @@ class _MealAddSheetState extends State<_MealAddSheet> {
           onChanged: (v) => setState(() => _alsoTemplate = v),
           // Per-100g math requires a positive weight; otherwise the template
           // we'd save is meaningless. Surface that requirement up-front.
-          disabledReason:
-              (double.tryParse(_weight.text.trim()) ?? 0) <= 0
-                  ? 'Enter weight to derive per-100g values'
-                  : null,
+          disabledReason: (double.tryParse(_weight.text.trim()) ?? 0) <= 0
+              ? 'Enter weight to derive per-100g values'
+              : null,
         ),
         const SizedBox(height: 12),
         PrimaryButton(label: 'Save', onPressed: _save),
@@ -1231,9 +1229,10 @@ class _WorkoutAddSheetState extends State<_WorkoutAddSheet> {
             final dur = t.defaultDurationMin > 0
                 ? '${t.defaultDurationMin.toStringAsFixed(0)} min'
                 : null;
-            return [t.focus, dur]
-                .where((s) => s != null && s.isNotEmpty)
-                .join(' · ');
+            return [
+              t.focus,
+              dur,
+            ].where((s) => s != null && s.isNotEmpty).join(' · ');
           },
           iconOf: (_) => Icons.fitness_center,
           onPick: _applyWorkoutTemplate,

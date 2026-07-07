@@ -6,12 +6,16 @@ class TradingAccount {
   final String currency;
   final num balance;
 
+  /// UTC ISO-8601 of the last content change (stamped centrally on commit).
+  final String? updatedAt;
+
   const TradingAccount({
     required this.id,
     required this.name,
     this.type = 'broker',
     this.currency = 'USD',
     this.balance = 0,
+    this.updatedAt,
   });
 
   factory TradingAccount.fromJson(Map<String, dynamic> j) => TradingAccount(
@@ -20,6 +24,7 @@ class TradingAccount {
     type: j['type'] as String? ?? 'broker',
     currency: j['currency'] as String? ?? 'USD',
     balance: (j['balance'] as num?) ?? 0,
+    updatedAt: j['updatedAt'] as String?,
   );
 
   Map<String, dynamic> toJson() => {
@@ -28,6 +33,7 @@ class TradingAccount {
     'type': type,
     'currency': currency,
     'balance': balance,
+    if (updatedAt != null) 'updatedAt': updatedAt,
   };
 
   TradingAccount copyWith({
@@ -41,6 +47,7 @@ class TradingAccount {
     type: type ?? this.type,
     currency: currency ?? this.currency,
     balance: balance ?? this.balance,
+    updatedAt: updatedAt,
   );
 }
 
@@ -53,6 +60,9 @@ class Flow {
   final String date; // ISO-8601
   final String note;
 
+  /// UTC ISO-8601 of the last content change (stamped centrally on commit).
+  final String? updatedAt;
+
   const Flow({
     required this.id,
     required this.accountId,
@@ -60,6 +70,7 @@ class Flow {
     required this.amount,
     required this.date,
     this.note = '',
+    this.updatedAt,
   });
 
   factory Flow.fromJson(Map<String, dynamic> j) => Flow(
@@ -69,6 +80,7 @@ class Flow {
     amount: (j['amount'] as num?) ?? 0,
     date: j['date'] as String,
     note: j['note'] as String? ?? '',
+    updatedAt: j['updatedAt'] as String?,
   );
 
   Map<String, dynamic> toJson() => {
@@ -78,6 +90,7 @@ class Flow {
     'amount': amount,
     'date': date,
     'note': note,
+    if (updatedAt != null) 'updatedAt': updatedAt,
   };
 }
 

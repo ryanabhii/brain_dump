@@ -12,13 +12,13 @@ import 'drive_config.dart';
 /// `appDataFolder`. Explicit backup/restore — no merge.
 class DriveSyncService {
   static const _fileName = 'tracker_backup.json';
-  // Full `drive` scope is required for multi-user sync: a file shared *to* you
-  // isn't visible under the narrow appdata scope. appdata is kept for the
-  // existing whole-app backup/restore. Both are requested together.
-  static const List<String> _scopes = [
-    drive.DriveApi.driveScope,
-    drive.DriveApi.driveAppdataScope,
-  ];
+  // appdata ONLY. Everything the app touches (whole-app backup + per-tab sync
+  // files) lives in the hidden appDataFolder, invisible to other apps and to
+  // the rest of the user's Drive. Deliberately NOT the full `drive` scope:
+  // that is a Google "restricted" scope requiring verification + a CASA
+  // security assessment to publish, and it was only ever needed for the
+  // (since removed) cross-user tab sharing.
+  static const List<String> _scopes = [drive.DriveApi.driveAppdataScope];
 
   /// Called whenever the signed-in user changes (so the UI can rebuild).
   final void Function()? onChanged;

@@ -786,12 +786,12 @@ class ProfileScreen extends StatelessWidget {
                           const SizedBox(height: 12),
                           const Divider(height: 1, color: AppColors.zinc800),
                           const SizedBox(height: 12),
-                          const SectionLabel('Multi-user sync'),
+                          const SectionLabel('Device sync'),
                           const SizedBox(height: 6),
                           Text(
                             app.syncConflicts > 0
                                 ? '${app.syncConflicts} item(s) kept on both sides — review duplicates'
-                                : 'Share tabs with others; changes sync every ~15s.',
+                                : 'Sync tabs across your devices — changes land within a minute.',
                             style: TextStyle(
                               fontSize: 11,
                               color: app.syncConflicts > 0
@@ -825,8 +825,8 @@ class ProfileScreen extends StatelessWidget {
                               const SizedBox(width: 8),
                               Expanded(
                                 child: _PillButton(
-                                  label: 'Shared tabs',
-                                  onTap: () => _openSharing(context),
+                                  label: 'Synced tabs',
+                                  onTap: () => _openSyncedTabs(context),
                                 ),
                               ),
                             ],
@@ -903,12 +903,12 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  void _openSharing(BuildContext context) {
+  void _openSyncedTabs(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => const _SyncShareSheet(),
+      builder: (_) => const _SyncTabsSheet(),
     );
   }
 
@@ -975,7 +975,8 @@ String _identitySubtitle(AppState app) {
 /// "12 templates · meals, workouts" — encourages exploration without a long
 /// list of zero-counts.
 String _templatesSubtitle(dynamic data) {
-  final total = (data.mealTemplates as List).length +
+  final total =
+      (data.mealTemplates as List).length +
       (data.workoutTemplates as List).length +
       (data.groceryTemplates as List).length +
       (data.pantryTemplates as List).length +
@@ -1103,18 +1104,18 @@ class _TimeButton extends StatelessWidget {
 String _hhmm(DateTime d) =>
     '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
 
-// ── Per-tab sharing sheet ──────────────────────────────────────
-class _SyncShareSheet extends StatefulWidget {
-  const _SyncShareSheet();
+// ── Per-tab sync sheet ─────────────────────────────────────────
+class _SyncTabsSheet extends StatefulWidget {
+  const _SyncTabsSheet();
   @override
-  State<_SyncShareSheet> createState() => _SyncShareSheetState();
+  State<_SyncTabsSheet> createState() => _SyncTabsSheetState();
 }
 
-class _SyncShareSheetState extends State<_SyncShareSheet> {
+class _SyncTabsSheetState extends State<_SyncTabsSheet> {
   @override
   void initState() {
     super.initState();
-    // Pull the latest access roles from Drive when the sheet opens.
+    // Pull the latest synced-tab set from Drive when the sheet opens.
     WidgetsBinding.instance.addPostFrameCallback(
       (_) => context.read<AppState>().refreshRoles(),
     );
@@ -1125,11 +1126,12 @@ class _SyncShareSheetState extends State<_SyncShareSheet> {
     final app = context.watch<AppState>();
     final roles = app.syncRoles;
     return SheetShell(
-      title: 'Shared tabs',
+      title: 'Synced tabs',
       children: [
         const Text(
-          'Each tab syncs as its own Drive file. Sharing grants someone '
-          'view-only or edit access to just that tab.',
+          'Each enabled tab syncs as its own file in your Drive\'s private '
+          'app storage — sign in with the same Google account on another '
+          'device to sync it there too.',
           style: TextStyle(fontSize: 11, color: AppColors.zinc500),
         ),
         const SizedBox(height: 12),
@@ -1145,11 +1147,6 @@ class _SyncShareSheetState extends State<_SyncShareSheet> {
     SyncRole? role,
   ) {
     final enabled = role != null && role != SyncRole.none;
-    final status = !enabled
-        ? 'Not synced'
-        : role == SyncRole.editor
-        ? 'Syncing · you can edit'
-        : 'Shared with you · view-only';
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
@@ -1166,7 +1163,7 @@ class _SyncShareSheetState extends State<_SyncShareSheet> {
                   ),
                 ),
                 Text(
-                  status,
+                  enabled ? 'Syncing across your devices' : 'Not synced',
                   style: TextStyle(
                     fontSize: 11,
                     color: enabled ? AppColors.emerald400 : AppColors.zinc500,
@@ -1188,192 +1185,7 @@ class _SyncShareSheetState extends State<_SyncShareSheet> {
                   ),
                 );
               },
-            )
-          else if (role == SyncRole.editor)
-            _PillButton(
-              label: 'Manage',
-              filled: true,
-              onTap: () => showModalBottomSheet<void>(
-                context: context,
-                isScrollControlled: true,
-                backgroundColor: Colors.transparent,
-                builder: (_) => _ManageAccessSheet(tab),
-              ),
             ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Email + role dialog used to add a collaborator to [tab].
-Future<void> _shareDialog(
-  BuildContext context,
-  AppState app,
-  SyncTab tab,
-) async {
-  // _ShareTabDialog owns its controller so it is disposed with the widget
-  // (after the exit animation) rather than immediately when the future resolves.
-  final messenger = ScaffoldMessenger.of(context);
-  final result = await showDialog<({String email, SyncRole role})>(
-    context: context,
-    builder: (_) => _ShareTabDialog(tabLabel: tab.label),
-  );
-  if (result != null && result.email.isNotEmpty) {
-    final msg = await app.shareTab(tab.key, result.email, result.role);
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        duration: const Duration(milliseconds: 1600),
-      ),
-    );
-  }
-}
-
-// ── Manage access (collaborators) for one tab ──────────────────
-class _ManageAccessSheet extends StatefulWidget {
-  final SyncTab tab;
-  const _ManageAccessSheet(this.tab);
-  @override
-  State<_ManageAccessSheet> createState() => _ManageAccessSheetState();
-}
-
-class _ManageAccessSheetState extends State<_ManageAccessSheet> {
-  List<Collaborator>? _people; // null = loading
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    final people = await context.read<AppState>().tabCollaborators(
-      widget.tab.key,
-    );
-    if (!mounted) return;
-    setState(() => _people = people);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final app = context.read<AppState>();
-    final people = _people;
-    return SheetShell(
-      title: 'Share · ${widget.tab.label}',
-      children: [
-        _PillButton(
-          label: 'Add person',
-          filled: true,
-          onTap: () async {
-            await _shareDialog(context, app, widget.tab);
-            await _load();
-          },
-        ),
-        const SizedBox(height: 12),
-        if (people == null)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
-            child: Center(
-              child: Text(
-                'Loading…',
-                style: TextStyle(color: AppColors.zinc500),
-              ),
-            ),
-          )
-        else if (people.isEmpty)
-          const Text(
-            'No one yet. Add a person to share this tab.',
-            style: TextStyle(fontSize: 12, color: AppColors.zinc500),
-          )
-        else
-          for (final c in people) _personRow(app, c),
-      ],
-    );
-  }
-
-  Widget _personRow(AppState app, Collaborator c) {
-    Future<void> act(Future<String> Function() op) async {
-      final messenger = ScaffoldMessenger.of(context);
-      final msg = await op();
-      await _load();
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(msg),
-          duration: const Duration(milliseconds: 1400),
-        ),
-      );
-    }
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  c.email,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                Text(
-                  c.isOwner
-                      ? 'Owner'
-                      : c.role == SyncRole.editor
-                      ? 'Can edit'
-                      : 'View only',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.zinc500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (!c.isOwner) ...[
-            // Tap to flip the role.
-            GestureDetector(
-              onTap: () => act(
-                () => app.setCollaboratorRole(
-                  widget.tab.key,
-                  c.permissionId,
-                  c.role == SyncRole.editor ? SyncRole.viewer : SyncRole.editor,
-                ),
-              ),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.zinc800,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  c.role == SyncRole.editor ? 'Editor' : 'Viewer',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.zinc300,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            GestureDetector(
-              onTap: () => act(
-                () => app.revokeCollaborator(widget.tab.key, c.permissionId),
-              ),
-              child: const Icon(
-                Icons.close,
-                size: 16,
-                color: AppColors.zinc500,
-              ),
-            ),
-          ],
         ],
       ),
     );
@@ -1460,101 +1272,6 @@ class _AddMemberDialogState extends State<_AddMemberDialog> {
         TextButton(
           onPressed: () => Navigator.pop(context, _controller.text.trim()),
           child: const Text('Add'),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Share-tab dialog ───────────────────────────────────────────
-/// Owns its [TextEditingController] for the same reason as [_AddMemberDialog].
-class _ShareTabDialog extends StatefulWidget {
-  final String tabLabel;
-  const _ShareTabDialog({required this.tabLabel});
-
-  @override
-  State<_ShareTabDialog> createState() => _ShareTabDialogState();
-}
-
-class _ShareTabDialogState extends State<_ShareTabDialog> {
-  final _controller = TextEditingController();
-  SyncRole _role = SyncRole.editor;
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: AppColors.zinc900,
-      title: Text('Share ${widget.tabLabel}'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: _controller,
-            autofocus: true,
-            keyboardType: TextInputType.emailAddress,
-            style: const TextStyle(color: AppColors.zinc100),
-            decoration: const InputDecoration(
-              hintText: 'their@gmail.com',
-              hintStyle: TextStyle(color: AppColors.zinc600),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              for (final r in const [SyncRole.editor, SyncRole.viewer])
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: GestureDetector(
-                    onTap: () => setState(() => _role = r),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _role == r
-                            ? AppColors.a(AppColors.cyan500, 0.2)
-                            : AppColors.zinc800,
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(
-                          color: _role == r
-                              ? AppColors.a(AppColors.cyan500, 0.4)
-                              : Colors.transparent,
-                        ),
-                      ),
-                      child: Text(
-                        r == SyncRole.editor ? 'Can edit' : 'View only',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: _role == r
-                              ? AppColors.cyan300
-                              : AppColors.zinc400,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        TextButton(
-          onPressed: () => Navigator.pop(
-            context,
-            (email: _controller.text.trim(), role: _role),
-          ),
-          child: const Text('Share'),
         ),
       ],
     );

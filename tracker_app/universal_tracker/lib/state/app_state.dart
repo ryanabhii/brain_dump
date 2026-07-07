@@ -24,6 +24,7 @@ import '../services/storage_service.dart';
 import '../sync/drive_remote_store.dart';
 import '../sync/merge.dart';
 import '../sync/remote_store.dart';
+import '../sync/stamp.dart';
 import '../sync/sync_engine.dart';
 import '../sync/sync_tabs.dart';
 import '../utils/auto_route.dart';
@@ -108,16 +109,27 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
     if (recurred != null) unawaited(_storage.save(_data!));
     unawaited(Notifications.reschedule(_data!));
-    // Build the sync engine from the persisted base (sync metadata).
+    // Build the sync engine from the persisted base + tombstones (sync
+    // metadata).
     _engine = SyncEngine(
       _remote,
       base: _decodeBase(await _storage.loadSyncBase()),
+      tombstones: _decodeTombstones(await _storage.loadSyncTombstones()),
     );
   }
 
-  /// The single write path: replace state, notify the UI, then persist and
-  /// refresh scheduled notifications (a no-op on web).
+  /// The single write path for local mutations: stamp `updatedAt` onto every
+  /// item whose content changed (see stampUpdatedAt), replace state, notify
+  /// the UI, then persist and refresh scheduled notifications.
   Future<void> _commit(AppData next) async {
+    final prev = _data;
+    await _commitRaw(prev == null ? next : stampUpdatedAt(prev, next));
+  }
+
+  /// Commit WITHOUT updatedAt stamping — for state produced by the sync merge
+  /// or a restore, whose items must keep the stamps they arrived with (a
+  /// remote edit re-stamped locally would misdate it).
+  Future<void> _commitRaw(AppData next) async {
     _data = next;
     notifyListeners();
     await _storage.save(next);
@@ -437,6 +449,21 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     final d = _data!;
     _commit(
       d.copyWith(braindumps: d.braindumps.where((b) => b.id != id).toList()),
+    );
+  }
+
+  /// Replace a dump's note text — used by the edit sheet and by the
+  /// "merge transcript into note" flow on voice dumps.
+  void updateDumpText(String id, String text) {
+    final t = text.trim();
+    if (t.isEmpty) return;
+    final d = _data!;
+    _commit(
+      d.copyWith(
+        braindumps: d.braindumps
+            .map((b) => b.id == id ? b.copyWith(text: t) : b)
+            .toList(),
+      ),
     );
   }
 
@@ -794,8 +821,8 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
       // Seed the alert lead-time from the profile's "Default lead-time" so that
       // setting actually drives new zones; it stays per-zone editable after.
       alertBefore: d.profile.notifications.leadTime,
-      checklist: checklist ??
-          const ['HTF bias set', 'News checked', 'Risk defined'],
+      checklist:
+          checklist ?? const ['HTF bias set', 'News checked', 'Risk defined'],
     );
     _commit(
       _remember(
@@ -989,63 +1016,96 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   // Generic CRUD: each typed method below is a thin wrapper so call sites
   // stay self-documenting and the storage selectors are co-located.
 
-  void saveMealTemplate(MealTemplate t) =>
-      _upsert<MealTemplate>(_data!.mealTemplates, t, (next) =>
-          _commit(_data!.copyWith(mealTemplates: next)));
-  void removeMealTemplate(String id) => _commit(_data!.copyWith(
-      mealTemplates:
-          _data!.mealTemplates.where((t) => t.id != id).toList()));
+  void saveMealTemplate(MealTemplate t) => _upsert<MealTemplate>(
+    _data!.mealTemplates,
+    t,
+    (next) => _commit(_data!.copyWith(mealTemplates: next)),
+  );
+  void removeMealTemplate(String id) => _commit(
+    _data!.copyWith(
+      mealTemplates: _data!.mealTemplates.where((t) => t.id != id).toList(),
+    ),
+  );
 
-  void saveWorkoutTemplate(WorkoutTemplate t) =>
-      _upsert<WorkoutTemplate>(_data!.workoutTemplates, t, (next) =>
-          _commit(_data!.copyWith(workoutTemplates: next)));
-  void removeWorkoutTemplate(String id) => _commit(_data!.copyWith(
-      workoutTemplates:
-          _data!.workoutTemplates.where((t) => t.id != id).toList()));
+  void saveWorkoutTemplate(WorkoutTemplate t) => _upsert<WorkoutTemplate>(
+    _data!.workoutTemplates,
+    t,
+    (next) => _commit(_data!.copyWith(workoutTemplates: next)),
+  );
+  void removeWorkoutTemplate(String id) => _commit(
+    _data!.copyWith(
+      workoutTemplates: _data!.workoutTemplates
+          .where((t) => t.id != id)
+          .toList(),
+    ),
+  );
 
-  void saveGroceryTemplate(GroceryTemplate t) =>
-      _upsert<GroceryTemplate>(_data!.groceryTemplates, t, (next) =>
-          _commit(_data!.copyWith(groceryTemplates: next)));
-  void removeGroceryTemplate(String id) => _commit(_data!.copyWith(
-      groceryTemplates:
-          _data!.groceryTemplates.where((t) => t.id != id).toList()));
+  void saveGroceryTemplate(GroceryTemplate t) => _upsert<GroceryTemplate>(
+    _data!.groceryTemplates,
+    t,
+    (next) => _commit(_data!.copyWith(groceryTemplates: next)),
+  );
+  void removeGroceryTemplate(String id) => _commit(
+    _data!.copyWith(
+      groceryTemplates: _data!.groceryTemplates
+          .where((t) => t.id != id)
+          .toList(),
+    ),
+  );
 
-  void savePantryTemplate(PantryTemplate t) =>
-      _upsert<PantryTemplate>(_data!.pantryTemplates, t, (next) =>
-          _commit(_data!.copyWith(pantryTemplates: next)));
-  void removePantryTemplate(String id) => _commit(_data!.copyWith(
-      pantryTemplates:
-          _data!.pantryTemplates.where((t) => t.id != id).toList()));
+  void savePantryTemplate(PantryTemplate t) => _upsert<PantryTemplate>(
+    _data!.pantryTemplates,
+    t,
+    (next) => _commit(_data!.copyWith(pantryTemplates: next)),
+  );
+  void removePantryTemplate(String id) => _commit(
+    _data!.copyWith(
+      pantryTemplates: _data!.pantryTemplates.where((t) => t.id != id).toList(),
+    ),
+  );
 
   void saveSubscriptionTemplate(SubscriptionTemplate t) =>
-      _upsert<SubscriptionTemplate>(_data!.subscriptionTemplates, t, (next) =>
-          _commit(_data!.copyWith(subscriptionTemplates: next)));
-  void removeSubscriptionTemplate(String id) => _commit(_data!.copyWith(
-      subscriptionTemplates:
-          _data!.subscriptionTemplates.where((t) => t.id != id).toList()));
+      _upsert<SubscriptionTemplate>(
+        _data!.subscriptionTemplates,
+        t,
+        (next) => _commit(_data!.copyWith(subscriptionTemplates: next)),
+      );
+  void removeSubscriptionTemplate(String id) => _commit(
+    _data!.copyWith(
+      subscriptionTemplates: _data!.subscriptionTemplates
+          .where((t) => t.id != id)
+          .toList(),
+    ),
+  );
 
-  void saveKillzoneTemplate(KillzoneTemplate t) =>
-      _upsert<KillzoneTemplate>(_data!.killzoneTemplates, t, (next) =>
-          _commit(_data!.copyWith(killzoneTemplates: next)));
-  void removeKillzoneTemplate(String id) => _commit(_data!.copyWith(
-      killzoneTemplates:
-          _data!.killzoneTemplates.where((t) => t.id != id).toList()));
+  void saveKillzoneTemplate(KillzoneTemplate t) => _upsert<KillzoneTemplate>(
+    _data!.killzoneTemplates,
+    t,
+    (next) => _commit(_data!.copyWith(killzoneTemplates: next)),
+  );
+  void removeKillzoneTemplate(String id) => _commit(
+    _data!.copyWith(
+      killzoneTemplates: _data!.killzoneTemplates
+          .where((t) => t.id != id)
+          .toList(),
+    ),
+  );
 
-  void saveFlowTemplate(FlowTemplate t) =>
-      _upsert<FlowTemplate>(_data!.flowTemplates, t, (next) =>
-          _commit(_data!.copyWith(flowTemplates: next)));
-  void removeFlowTemplate(String id) => _commit(_data!.copyWith(
-      flowTemplates:
-          _data!.flowTemplates.where((t) => t.id != id).toList()));
+  void saveFlowTemplate(FlowTemplate t) => _upsert<FlowTemplate>(
+    _data!.flowTemplates,
+    t,
+    (next) => _commit(_data!.copyWith(flowTemplates: next)),
+  );
+  void removeFlowTemplate(String id) => _commit(
+    _data!.copyWith(
+      flowTemplates: _data!.flowTemplates.where((t) => t.id != id).toList(),
+    ),
+  );
 
   /// Insert if [item.id] is new, otherwise replace in place — keeps the user's
   /// preferred order across edits. The typed wrappers above thread the right
   /// list + commit callback so this stays a one-liner.
-  void _upsert<T>(
-    List<T> list,
-    T item,
-    void Function(List<T> next) commit,
-  ) {
+  void _upsert<T>(List<T> list, T item, void Function(List<T> next) commit) {
     // Templates have `id` declared as a String field; pattern-match it from
     // the generic via `dynamic`. Keeps the helper from needing a base class.
     final id = (item as dynamic).id as String;
@@ -1076,22 +1136,19 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   );
   DateTime? lastSyncAt;
 
-  // ── Multi-user sync (per-tab, over Drive) ──
+  // ── Multi-device sync (per-tab, over Drive appdata) ──
   late final DriveRemoteStore _remote = DriveRemoteStore(_drive.apiClient);
   SyncEngine? _engine;
   Timer? _syncTimer;
   bool _syncing = false;
 
-  /// Tabs this account can sync and the role on each (cached from the last
-  /// sync / refresh). Empty = nothing shared or enabled.
+  /// Tabs currently syncing on this account (cached from the last sync /
+  /// refresh). Empty = none enabled yet.
   Map<String, SyncRole> _roles = {};
   Map<String, SyncRole> get syncRoles => _roles;
 
   /// Conflicts kept-both in the most recent sync (for a UI nudge).
   int syncConflicts = 0;
-
-  /// A tab is editable locally unless it's shared with us view-only.
-  bool canEditTab(String tabKey) => _roles[tabKey] != SyncRole.viewer;
 
   /// True once the first-launch permissions dialog has been shown. The shell
   /// uses this to pop the dialog exactly once.
@@ -1115,6 +1172,20 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
           },
       };
 
+  Map<String, Map<String, Map<String, String>>> _decodeTombstones(
+    Map<String, dynamic> raw,
+  ) => {
+    for (final tab in raw.entries)
+      tab.key: {
+        for (final coll in (tab.value as Map<String, dynamic>).entries)
+          coll.key: (coll.value as Map).cast<String, String>(),
+      },
+  };
+
+  /// True when local data was unreadable at startup and defaults were loaded.
+  /// The original bytes are quarantined, not overwritten (StorageService).
+  bool get dataRecoveredFromCorruption => _storage.loadRecoveredFromCorruption;
+
   String? get driveEmail => _drive.email;
   bool get driveSignedIn => _drive.isSignedIn;
 
@@ -1122,7 +1193,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     try {
       final ok = await _drive.signIn();
       notifyListeners();
-      if (ok) unawaited(syncNow()); // pull shared tabs right away
+      if (ok) unawaited(syncNow()); // pull synced tabs right away
       return ok;
     } catch (e) {
       debugPrint('Drive sign-in failed: $e');
@@ -1156,7 +1227,11 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     try {
       final json = await _drive.download();
       if (json == null) return 'No backup found on Drive';
-      await _commit(AppData.fromJson(jsonDecode(json) as Map<String, dynamic>));
+      // Raw commit: restored items keep the updatedAt stamps they were
+      // backed up with instead of being re-dated to "now".
+      await _commitRaw(
+        AppData.fromJson(jsonDecode(json) as Map<String, dynamic>),
+      );
       lastSyncAt = DateTime.now();
       notifyListeners();
       return 'Restored from Drive';
@@ -1177,22 +1252,44 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
       _roles = await _remote.accessibleTabs();
       if (_roles.isEmpty) {
         notifyListeners();
-        return 'No tabs enabled — tap \'Shared tabs\' to set one up first';
+        return 'No tabs enabled — tap \'Synced tabs\' to set one up first';
       }
-      final result = await engine.sync(_data!, _roles);
-      syncConflicts = result.conflicts;
+      final snapshot = _data!;
+      final result = await engine.sync(snapshot, _roles);
+      var applied = result.data;
+      var conflicts = result.conflicts;
+      // Local edits may have landed while the merge was in flight (the
+      // engine awaited network I/O). Fold them into the merged result rather
+      // than letting the snapshot-based merge clobber them — without this, an
+      // item added mid-sync is permanently lost.
+      if (!identical(_data, snapshot)) {
+        final fold = foldConcurrentEdits(
+          snapshot: snapshot,
+          current: _data!,
+          merged: applied,
+          tabs: result.syncedTabs,
+        );
+        applied = fold.data;
+        conflicts += fold.conflicts;
+      }
+      syncConflicts = conflicts;
       // Only rewrite local state when the merge actually changed something.
-      if (jsonEncode(result.data.toJson()) != jsonEncode(_data!.toJson())) {
-        await _commit(result.data);
+      // Raw commit: merged items keep their own (possibly remote) stamps.
+      if (jsonEncode(applied.toJson()) != jsonEncode(_data!.toJson())) {
+        await _commitRaw(applied);
       }
-      await _storage.saveSyncBase(engine.base);
       lastSyncAt = DateTime.now();
       _syncErrorCount = 0;
       _nextSyncAt = null;
       notifyListeners();
-      final c = result.conflicts;
-      return 'Synced ${result.syncedTabs.length} tab(s)'
-          '${c > 0 ? ' · $c kept-both' : ''}';
+      var msg =
+          'Synced ${result.syncedTabs.length} tab(s)'
+          '${conflicts > 0 ? ' · $conflicts kept-both' : ''}';
+      if (result.corruptTabs.isNotEmpty) {
+        final skipped = result.corruptTabs.map(syncTabLabel).join(', ');
+        msg += ' · skipped unreadable: $skipped';
+      }
+      return msg;
     } catch (e) {
       debugPrint('Sync failed: $e');
       _syncErrorCount++;
@@ -1204,18 +1301,29 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
       _nextSyncAt = DateTime.now().add(Duration(seconds: backoffSeconds));
       // Surface the real error so it is diagnosable from the snackbar.
       final msg = e.toString();
-      if (msg.contains('401') || msg.contains('403') ||
+      if (msg.contains('401') ||
+          msg.contains('403') ||
           msg.contains('accessNotConfigured') ||
           msg.contains('insufficientPermissions')) {
         return 'Sync failed — Drive API not enabled or scope not granted';
       }
       return 'Sync failed — $e';
     } finally {
+      // Persist whatever the engine reconciled. Runs on failure too: a
+      // mid-pass throw leaves earlier tabs' base/tombstones advanced in
+      // memory, and losing that record would resurrect their deletions.
+      try {
+        await _storage.saveSyncBase(engine.base);
+        await _storage.saveSyncTombstones(engine.tombstones);
+      } catch (e) {
+        debugPrint('persisting sync metadata failed: $e');
+      }
       _syncing = false;
     }
   }
 
-  /// Refresh the cached per-tab roles (for the share UI) without a full sync.
+  /// Refresh which tabs are syncing (for the Synced-tabs UI) without a full
+  /// sync pass.
   Future<void> refreshRoles() async {
     if (!driveSignedIn) return;
     try {
@@ -1226,7 +1334,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
-  /// Start syncing one of your own tabs (creates its Drive file), then sync.
+  /// Start syncing a tab (creates its Drive appdata file), then sync.
   Future<String> enableTab(String tabKey) async {
     if (!driveSignedIn) return 'Sign in first';
     try {
@@ -1235,58 +1343,6 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     } catch (e) {
       debugPrint('enableTab failed: $e');
       return 'Could not enable sync';
-    }
-  }
-
-  /// Share a tab with someone by email at [role], then sync.
-  Future<String> shareTab(String tabKey, String email, SyncRole role) async {
-    if (!driveSignedIn) return 'Sign in first';
-    final e = email.trim();
-    if (e.isEmpty) return 'Enter an email';
-    try {
-      await _remote.share(tabKey, e, role);
-      await syncNow();
-      return 'Shared ${syncTabLabel(tabKey)} with $e';
-    } catch (err) {
-      debugPrint('shareTab failed: $err');
-      return 'Share failed — check the email';
-    }
-  }
-
-  /// Everyone with access to a tab (for the manage-access UI).
-  Future<List<Collaborator>> tabCollaborators(String tabKey) async {
-    if (!driveSignedIn) return const [];
-    try {
-      return await _remote.collaborators(tabKey);
-    } catch (e) {
-      debugPrint('collaborators failed: $e');
-      return const [];
-    }
-  }
-
-  /// Change a collaborator's role (viewer ↔ editor).
-  Future<String> setCollaboratorRole(
-    String tabKey,
-    String permissionId,
-    SyncRole role,
-  ) async {
-    try {
-      await _remote.setRole(tabKey, permissionId, role);
-      return role == SyncRole.editor ? 'Now an editor' : 'Now view-only';
-    } catch (e) {
-      debugPrint('setCollaboratorRole failed: $e');
-      return 'Could not change role';
-    }
-  }
-
-  /// Revoke a collaborator's access to a tab.
-  Future<String> revokeCollaborator(String tabKey, String permissionId) async {
-    try {
-      await _remote.revoke(tabKey, permissionId);
-      return 'Access removed';
-    } catch (e) {
-      debugPrint('revokeCollaborator failed: $e');
-      return 'Could not remove access';
     }
   }
 }

@@ -114,13 +114,34 @@ class _RootShellState extends State<RootShell> {
     _onboardingStarted = true;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
+      // Storage was unreadable at startup: the app recovered by loading
+      // defaults, keeping the original bytes quarantined. Never silently —
+      // the user must know their history isn't gone, just unreadable.
+      if (app.dataRecoveredFromCorruption) {
+        await showDialog<void>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Data recovered'),
+            content: const Text(
+              'Your saved data could not be read, so the app started with '
+              'defaults. The unreadable copy has been kept — nothing was '
+              'deleted. Restoring from your Drive backup (Profile → Data) '
+              'will bring your history back.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+      if (!mounted) return;
       final seenWelcome = await app.hasSeenWelcome();
       if (!seenWelcome) {
         if (!mounted) return;
-        await WelcomeScreen.show(
-          context,
-          onDone: () => app.markWelcomeSeen(),
-        );
+        await WelcomeScreen.show(context, onDone: () => app.markWelcomeSeen());
       }
       if (!mounted) return;
       if (await app.hasOnboardedPermissions()) return;

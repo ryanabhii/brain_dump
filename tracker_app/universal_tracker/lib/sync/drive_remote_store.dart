@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:googleapis/drive/v3.dart' as drive;
 
-import 'merge.dart';
 import 'remote_store.dart';
 import 'sync_tabs.dart';
 
@@ -19,15 +18,19 @@ class ConcurrentModificationError implements Exception {
       'will retry on next sync';
 }
 
-/// Backend-free multi-user sync over Google Drive: one JSON file per tab,
-/// tagged with an `appProperties` marker, living in the user's normal Drive so
-/// it can be shared. Sharing a tab = a Drive permission on its file (reader →
-/// viewer, writer → editor) — Drive's own ACL is our per-tab/per-person model.
+/// Backend-free per-user sync over Google Drive: one JSON file per tab,
+/// tagged with an `appProperties` marker, living in the hidden
+/// `appDataFolder` — invisible to other apps and to the user's normal Drive.
+/// The same signed-in account on another device sees the same files, which is
+/// what makes multi-device sync work.
 ///
-/// Needs the full `drive` scope (a file shared *to* you isn't visible under the
-/// narrow `drive.file` scope). Fine in an OAuth app kept in Testing mode.
+/// Only the `drive.appdata` scope is needed — unrestricted, so the app can be
+/// published without Google's restricted-scope verification. (Cross-user tab
+/// sharing, which required the full `drive` scope, was removed for exactly
+/// that reason.)
 class DriveRemoteStore implements RemoteStore {
   static const _propKey = 'utrackerTab'; // appProperties marker → tab key
+  static const _space = 'appDataFolder';
 
   /// Supplies an authorized Drive client (null when signed out).
   final Future<drive.DriveApi?> Function() _apiProvider;
@@ -47,10 +50,9 @@ class DriveRemoteStore implements RemoteStore {
   Future<drive.File?> _find(drive.DriveApi api, String tab) async {
     final res = await api.files.list(
       q: "appProperties has { key='$_propKey' and value='$tab' } and trashed=false",
-      $fields:
-          'files(id,modifiedTime,headRevisionId,capabilities(canEdit))',
+      $fields: 'files(id,modifiedTime,headRevisionId)',
       orderBy: 'modifiedTime desc',
-      spaces: 'drive',
+      spaces: _space,
     );
     final files = res.files;
     if (files == null || files.isEmpty) return null;
@@ -60,10 +62,7 @@ class DriveRemoteStore implements RemoteStore {
       for (final dup in files.skip(1)) {
         if (dup.id == null) continue;
         try {
-          await api.files.update(
-            drive.File()..trashed = true,
-            dup.id!,
-          );
+          await api.files.update(drive.File()..trashed = true, dup.id!);
         } catch (_) {
           // ignore — another device may already be deleting it.
         }
@@ -75,14 +74,17 @@ class DriveRemoteStore implements RemoteStore {
   Future<drive.File> _ensure(drive.DriveApi api, String tab) async {
     final existing = await _find(api, tab);
     if (existing != null) return existing;
-    final bytes = utf8.encode(jsonEncode(<String, List<Json>>{}));
+    final bytes = utf8.encode(
+      encodeRemotePayload(const RemotePayload(collections: {})),
+    );
     final file = drive.File()
       ..name = _fileName(tab)
+      ..parents = [_space]
       ..appProperties = {_propKey: tab};
     final created = await api.files.create(
       file,
       uploadMedia: drive.Media(Stream.value(bytes), bytes.length),
-      $fields: 'id,headRevisionId,capabilities(canEdit)',
+      $fields: 'id,headRevisionId',
     );
     // A concurrent first-sync on another device may have created its own
     // file between our `_find` and `create`. Re-find now that the dust has
@@ -97,20 +99,19 @@ class DriveRemoteStore implements RemoteStore {
     // Drive API requires both key AND value in appProperties queries — querying
     // by key alone is not supported and returns 400 Invalid Value. We query
     // each tab declared in [kSyncTabs] individually and merge the results so
-    // the source of truth lives in one place (sync_tabs.dart).
+    // the source of truth lives in one place (sync_tabs.dart). Everything in
+    // the appDataFolder is the user's own, so every found tab is an editor.
     final out = <String, SyncRole>{};
     for (final tab in kSyncTabs) {
       final res = await api.files.list(
         q: "appProperties has { key='$_propKey' and value='${tab.key}' } and trashed=false",
-        $fields: 'files(id,appProperties,capabilities(canEdit))',
-        spaces: 'drive',
+        $fields: 'files(id,appProperties)',
+        spaces: _space,
       );
       for (final f in res.files ?? const <drive.File>[]) {
         final t = f.appProperties?[_propKey];
         if (t == null) continue;
-        out[t] = (f.capabilities?.canEdit ?? false)
-            ? SyncRole.editor
-            : SyncRole.viewer;
+        out[t] = SyncRole.editor;
       }
     }
     return out;
@@ -124,7 +125,7 @@ class DriveRemoteStore implements RemoteStore {
   }
 
   @override
-  Future<Map<String, List<Json>>?> download(String tabKey) async {
+  Future<RemotePayload?> download(String tabKey) async {
     final api = await _apiProvider();
     if (api == null) return null;
     final f = await _find(api, tabKey);
@@ -150,18 +151,21 @@ class DriveRemoteStore implements RemoteStore {
     await for (final chunk in media.stream) {
       bytes.addAll(chunk);
     }
-    if (bytes.isEmpty) return <String, List<Json>>{};
-    final decoded = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
-    return decoded.map(
-      (k, v) => MapEntry(k, (v as List).map((e) => e as Json).toList()),
-    );
+    if (bytes.isEmpty) return const RemotePayload(collections: {});
+    // Malformed content surfaces as FormatException (see decodeRemotePayload)
+    // so the engine can quarantine the tab instead of wedging the whole pass.
+    try {
+      return decodeRemotePayload(utf8.decode(bytes));
+    } on TypeError catch (e) {
+      throw FormatException('corrupt remote file for "$tabKey": $e');
+    }
   }
 
   @override
-  Future<void> upload(String tabKey, Map<String, List<Json>> data) async {
+  Future<void> upload(String tabKey, RemotePayload payload) async {
     final api = await _apiProvider();
     if (api == null) throw StateError('Not signed in');
-    final bytes = utf8.encode(jsonEncode(data));
+    final bytes = utf8.encode(encodeRemotePayload(payload));
     final media = drive.Media(Stream.value(bytes), bytes.length);
     final existing = await _find(api, tabKey);
     final id = existing?.id;
@@ -172,6 +176,7 @@ class DriveRemoteStore implements RemoteStore {
       // a tab online, and it routes through [enable] / [_ensure].
       final file = drive.File()
         ..name = _fileName(tabKey)
+        ..parents = [_space]
         ..appProperties = {_propKey: tabKey};
       final created = await api.files.create(
         file,
@@ -188,7 +193,8 @@ class DriveRemoteStore implements RemoteStore {
     // Narrows (doesn't eliminate) the TOCTOU window — combined with the
     // sync engine's backoff + re-merge, the next pass will reconcile.
     final expected = _lastSeenRevision[tabKey];
-    if (expected != null && existing!.headRevisionId != null &&
+    if (expected != null &&
+        existing!.headRevisionId != null &&
         existing.headRevisionId != expected) {
       throw ConcurrentModificationError(tabKey);
     }
@@ -201,71 +207,5 @@ class DriveRemoteStore implements RemoteStore {
     if (updated.headRevisionId != null) {
       _lastSeenRevision[tabKey] = updated.headRevisionId!;
     }
-  }
-
-  @override
-  Future<void> share(String tabKey, String email, SyncRole role) async {
-    if (role == SyncRole.none) return;
-    final api = await _apiProvider();
-    if (api == null) throw StateError('Not signed in');
-    final file = await _ensure(api, tabKey);
-    final perm = drive.Permission()
-      ..type = 'user'
-      ..role = role == SyncRole.editor ? 'writer' : 'reader'
-      ..emailAddress = email;
-    await api.permissions.create(perm, file.id!, sendNotificationEmail: true);
-  }
-
-  @override
-  Future<List<Collaborator>> collaborators(String tabKey) async {
-    final api = await _apiProvider();
-    if (api == null) return const [];
-    final f = await _find(api, tabKey);
-    final id = f?.id;
-    if (id == null) return const [];
-    final res = await api.permissions.list(
-      id,
-      $fields: 'permissions(id,emailAddress,role,type)',
-    );
-    final out = <Collaborator>[];
-    for (final p in res.permissions ?? const <drive.Permission>[]) {
-      if (p.type != 'user' || p.id == null) continue;
-      final isOwner = p.role == 'owner';
-      out.add(
-        Collaborator(
-          permissionId: p.id!,
-          email: p.emailAddress ?? '(unknown)',
-          role: p.role == 'writer' || isOwner
-              ? SyncRole.editor
-              : SyncRole.viewer,
-          isOwner: isOwner,
-        ),
-      );
-    }
-    return out;
-  }
-
-  @override
-  Future<void> setRole(
-    String tabKey,
-    String permissionId,
-    SyncRole role,
-  ) async {
-    final api = await _apiProvider();
-    if (api == null) throw StateError('Not signed in');
-    final f = await _find(api, tabKey);
-    if (f?.id == null) return;
-    final perm = drive.Permission()
-      ..role = role == SyncRole.editor ? 'writer' : 'reader';
-    await api.permissions.update(perm, f!.id!, permissionId);
-  }
-
-  @override
-  Future<void> revoke(String tabKey, String permissionId) async {
-    final api = await _apiProvider();
-    if (api == null) throw StateError('Not signed in');
-    final f = await _find(api, tabKey);
-    if (f?.id == null) return;
-    await api.permissions.delete(f!.id!, permissionId);
   }
 }

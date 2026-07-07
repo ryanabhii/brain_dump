@@ -17,6 +17,10 @@ class Subscription {
   final bool usedThisMonth;
   final String? lastUsedReset; // ISO-8601
 
+  /// UTC ISO-8601 of the last content change. Stamped centrally on commit
+  /// (see stampUpdatedAt) so the sync merge can order edits against deletes.
+  final String? updatedAt;
+
   const Subscription({
     required this.id,
     required this.name,
@@ -30,6 +34,7 @@ class Subscription {
     this.startedAt,
     this.usedThisMonth = false,
     this.lastUsedReset,
+    this.updatedAt,
   });
 
   /// Build from a decoded JSON map (the `fromJson` half of persistence).
@@ -46,6 +51,7 @@ class Subscription {
     startedAt: j['startedAt'] as String?,
     usedThisMonth: j['usedThisMonth'] as bool? ?? false,
     lastUsedReset: j['lastUsedReset'] as String?,
+    updatedAt: j['updatedAt'] as String?,
   );
 
   /// Convert back to a JSON-encodable map.
@@ -62,6 +68,7 @@ class Subscription {
     if (startedAt != null) 'startedAt': startedAt,
     'usedThisMonth': usedThisMonth,
     if (lastUsedReset != null) 'lastUsedReset': lastUsedReset,
+    if (updatedAt != null) 'updatedAt': updatedAt,
   };
 
   /// Returns a copy with selected fields replaced — the Dart equivalent of the
@@ -89,5 +96,6 @@ class Subscription {
     startedAt: startedAt,
     usedThisMonth: usedThisMonth ?? this.usedThisMonth,
     lastUsedReset: lastUsedReset ?? this.lastUsedReset,
+    updatedAt: updatedAt,
   );
 }

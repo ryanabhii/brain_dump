@@ -14,7 +14,8 @@ enum AppPermission {
   notifications,
 
   /// RECORD_AUDIO + (iOS) Speech Recognition. Powers voice brain dumps —
-  /// audio is transcribed on-device by [stt.SpeechToText] and never stored.
+  /// audio is transcribed on-device by [stt.SpeechToText] and the recording
+  /// is saved locally (documents/voice_notes) for later playback.
   microphone,
 
   /// Google account sign-in + Drive scope. Optional — only needed for the
@@ -33,9 +34,10 @@ extension AppPermissionLabel on AppPermission {
     AppPermission.notifications =>
       'Killzone alerts, brain-dump reminders, and your daily review.',
     AppPermission.microphone =>
-      'Voice brain dumps — transcribed on-device, no audio is saved.',
+      'Voice brain dumps — transcribed on-device; the recording stays on '
+          'this device so you can replay it.',
     AppPermission.driveSync =>
-      'Sign in with Google to back up and share tabs across devices.',
+      'Sign in with Google to back up and sync tabs across your devices.',
   };
 
   /// Whether this permission is even meaningful on the current platform.
@@ -52,6 +54,7 @@ extension AppPermissionLabel on AppPermission {
 enum PermissionOutcome {
   granted,
   denied,
+
   /// Not requestable on this platform (e.g. notifications on web). Treated as
   /// neither success nor failure — just hidden from the UI.
   unavailable,
@@ -73,9 +76,7 @@ class PermissionsService {
   /// conservatively report `denied` until [request] has been called once;
   /// Drive sync is `granted` iff the user is signed in.
   Map<AppPermission, PermissionOutcome> snapshot() {
-    return {
-      for (final p in all) p: _snapshotOne(p),
-    };
+    return {for (final p in all) p: _snapshotOne(p)};
   }
 
   PermissionOutcome _snapshotOne(AppPermission p) {

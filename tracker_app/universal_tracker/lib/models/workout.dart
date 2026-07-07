@@ -9,6 +9,9 @@ class Workout {
   final String time;
   final String date;
 
+  /// UTC ISO-8601 of the last content change (stamped centrally on commit).
+  final String? updatedAt;
+
   const Workout({
     required this.id,
     required this.name,
@@ -16,6 +19,7 @@ class Workout {
     this.durationMin = 0,
     this.time = '',
     this.date = '',
+    this.updatedAt,
   });
 
   factory Workout.fromJson(Map<String, dynamic> j) => Workout(
@@ -25,6 +29,7 @@ class Workout {
     durationMin: (j['durationMin'] as num?) ?? 0,
     time: j['time'] as String? ?? '',
     date: j['date'] as String? ?? '',
+    updatedAt: j['updatedAt'] as String?,
   );
 
   Map<String, dynamic> toJson() => {
@@ -34,5 +39,6 @@ class Workout {
     'durationMin': durationMin,
     'time': time,
     'date': date,
+    if (updatedAt != null) 'updatedAt': updatedAt,
   };
 }

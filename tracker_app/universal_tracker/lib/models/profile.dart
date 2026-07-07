@@ -138,16 +138,16 @@ class Profile {
     weightKg: (j['weightKg'] as num?) ?? 0,
     defaultCurrency: j['defaultCurrency'] as String? ?? 'USD',
     units: j['units'] as String? ?? 'metric',
-    pinnedNavTabs: (j['pinnedNavTabs'] as List?)
+    pinnedNavTabs:
+        (j['pinnedNavTabs'] as List?)
             ?.map((e) => (e as num).toInt())
             .where((i) => i >= 1 && i <= 5)
             .toList() ??
         const [1, 2, 3, 4, 5],
     // Older installs don't have this field — fall back to "show everything"
     // so the upgrade path keeps the dashboard looking the same.
-    pinnedHomeTiles: (j['pinnedHomeTiles'] as List?)
-            ?.whereType<String>()
-            .toList() ??
+    pinnedHomeTiles:
+        (j['pinnedHomeTiles'] as List?)?.whereType<String>().toList() ??
         const [
           'killzone',
           'spend',

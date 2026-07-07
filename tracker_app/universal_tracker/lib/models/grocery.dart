@@ -8,6 +8,9 @@ class GroceryItem {
   final bool completed;
   final String? recurring; // 'weekly' or null
 
+  /// UTC ISO-8601 of the last content change (stamped centrally on commit).
+  final String? updatedAt;
+
   const GroceryItem({
     required this.id,
     required this.name,
@@ -16,6 +19,7 @@ class GroceryItem {
     this.addedBy = 'You',
     this.completed = false,
     this.recurring,
+    this.updatedAt,
   });
 
   factory GroceryItem.fromJson(Map<String, dynamic> j) => GroceryItem(
@@ -26,6 +30,7 @@ class GroceryItem {
     addedBy: j['addedBy'] as String? ?? 'You',
     completed: j['completed'] as bool? ?? false,
     recurring: j['recurring'] as String?,
+    updatedAt: j['updatedAt'] as String?,
   );
 
   Map<String, dynamic> toJson() => {
@@ -36,6 +41,7 @@ class GroceryItem {
     'addedBy': addedBy,
     'completed': completed,
     'recurring': recurring,
+    if (updatedAt != null) 'updatedAt': updatedAt,
   };
 
   GroceryItem copyWith({
@@ -53,6 +59,7 @@ class GroceryItem {
     addedBy: addedBy ?? this.addedBy,
     completed: completed ?? this.completed,
     recurring: recurring ?? this.recurring,
+    updatedAt: updatedAt,
   );
 }
 
@@ -64,12 +71,16 @@ class PantryItem {
   final int lowThreshold;
   final String unit;
 
+  /// UTC ISO-8601 of the last content change (stamped centrally on commit).
+  final String? updatedAt;
+
   const PantryItem({
     required this.id,
     required this.name,
     this.qty = 0,
     this.lowThreshold = 1,
     this.unit = 'unit',
+    this.updatedAt,
   });
 
   /// True when stock is at or below the alert threshold.
@@ -81,6 +92,7 @@ class PantryItem {
     qty: (j['qty'] as num?)?.toInt() ?? 0,
     lowThreshold: (j['lowThreshold'] as num?)?.toInt() ?? 1,
     unit: j['unit'] as String? ?? 'unit',
+    updatedAt: j['updatedAt'] as String?,
   );
 
   Map<String, dynamic> toJson() => {
@@ -89,6 +101,7 @@ class PantryItem {
     'qty': qty,
     'lowThreshold': lowThreshold,
     'unit': unit,
+    if (updatedAt != null) 'updatedAt': updatedAt,
   };
 
   PantryItem copyWith({
@@ -102,6 +115,7 @@ class PantryItem {
     qty: qty ?? this.qty,
     lowThreshold: lowThreshold ?? this.lowThreshold,
     unit: unit ?? this.unit,
+    updatedAt: updatedAt,
   );
 }
 

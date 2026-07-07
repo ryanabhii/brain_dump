@@ -48,6 +48,9 @@ class Killzone {
   final List<int> checkedItems;
   final String checkedOn; // yyyy-mm-dd the ticks belong to
 
+  /// UTC ISO-8601 of the last content change (stamped centrally on commit).
+  final String? updatedAt;
+
   const Killzone({
     required this.id,
     required this.name,
@@ -61,6 +64,7 @@ class Killzone {
     this.skipUntil,
     this.checkedItems = const [],
     this.checkedOn = '',
+    this.updatedAt,
   });
 
   factory Killzone.fromJson(Map<String, dynamic> j) => Killzone(
@@ -82,6 +86,7 @@ class Killzone {
         .map((e) => (e as num).toInt())
         .toList(),
     checkedOn: j['checkedOn'] as String? ?? '',
+    updatedAt: j['updatedAt'] as String?,
   );
 
   Map<String, dynamic> toJson() => {
@@ -97,6 +102,7 @@ class Killzone {
     'skipUntil': skipUntil,
     'checkedItems': checkedItems,
     'checkedOn': checkedOn,
+    if (updatedAt != null) 'updatedAt': updatedAt,
   };
 
   /// [skipUntil] uses a sentinel so it can be set back to null explicitly.
@@ -122,5 +128,6 @@ class Killzone {
         : skipUntil as String?,
     checkedItems: checkedItems ?? this.checkedItems,
     checkedOn: checkedOn ?? this.checkedOn,
+    updatedAt: updatedAt,
   );
 }

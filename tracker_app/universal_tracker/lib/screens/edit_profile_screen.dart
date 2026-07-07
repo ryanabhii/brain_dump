@@ -19,13 +19,21 @@ const Map<String, Color> kAvatarColors = {
   'sky': AppColors.sky400,
 };
 
-Color avatarColorFor(String name) =>
-    kAvatarColors[name] ?? AppColors.cyan500;
+Color avatarColorFor(String name) => kAvatarColors[name] ?? AppColors.cyan500;
 
 /// A common set of currencies pre-filled in the dropdown. The user can still
 /// type any 3-letter ISO 4217 code into the field if theirs isn't listed.
 const List<String> kCurrencies = [
-  'USD', 'EUR', 'GBP', 'INR', 'JPY', 'CNY', 'AUD', 'CAD', 'CHF', 'SGD',
+  'USD',
+  'EUR',
+  'GBP',
+  'INR',
+  'JPY',
+  'CNY',
+  'AUD',
+  'CAD',
+  'CHF',
+  'SGD',
 ];
 
 /// Full-page editor for personal profile fields. Pushed from the Profile
@@ -189,9 +197,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       displayName: _name.text.trim(),
       email: _email.text.trim(),
       avatarColor: _avatarColor,
-      dob: _dob == null
-          ? ''
-          : DateFormat('yyyy-MM-dd').format(_dob!),
+      dob: _dob == null ? '' : DateFormat('yyyy-MM-dd').format(_dob!),
       sex: _sex,
       heightCm: _heightCm,
       weightKg: _weightKg,
@@ -216,310 +222,310 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       child: Scaffold(
         backgroundColor: AppColors.zinc950,
         appBar: AppBar(
-        backgroundColor: AppColors.zinc950,
-        elevation: 0,
-        title: const Text(
-          'Edit profile',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-        ),
-        actions: [
-          TextButton(
-            onPressed: _save,
-            child: const Text(
-              'Save',
-              style: TextStyle(
-                color: AppColors.cyan300,
-                fontWeight: FontWeight.w700,
+          backgroundColor: AppColors.zinc950,
+          elevation: 0,
+          title: const Text(
+            'Edit profile',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+          actions: [
+            TextButton(
+              onPressed: _save,
+              child: const Text(
+                'Save',
+                style: TextStyle(
+                  color: AppColors.cyan300,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
-          ),
-        ],
-      ),
-      body: Form(
-        key: _form,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-          children: [
-            // ── Avatar preview ──
-            Center(
-              child: Container(
-                width: 88,
-                height: 88,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [accent, AppColors.a(accent, 0.7)],
+          ],
+        ),
+        body: Form(
+          key: _form,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            children: [
+              // ── Avatar preview ──
+              Center(
+                child: Container(
+                  width: 88,
+                  height: 88,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [accent, AppColors.a(accent, 0.7)],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.a(accent, 0.35),
+                        blurRadius: 22,
+                        spreadRadius: 2,
+                      ),
+                    ],
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.a(accent, 0.35),
-                      blurRadius: 22,
-                      spreadRadius: 2,
+                  child: Text(
+                    _initialsFor(_name.text),
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w700,
+                      color: accent.computeLuminance() > 0.55
+                          ? AppColors.zinc950
+                          : Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              const _SectionHeading('Identity'),
+              const SizedBox(height: 8),
+              _Field(
+                label: 'Display name',
+                child: TextFormField(
+                  controller: _name,
+                  decoration: _inputDecoration(hint: 'e.g. John Ray'),
+                  style: const TextStyle(color: AppColors.zinc100),
+                  textCapitalization: TextCapitalization.words,
+                  onChanged: (_) => setState(() {}), // refresh initials preview
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Enter a name' : null,
+                ),
+              ),
+              const SizedBox(height: 12),
+              _Field(
+                label: 'Email',
+                child: TextFormField(
+                  controller: _email,
+                  decoration: _inputDecoration(hint: 'you@example.com'),
+                  style: const TextStyle(color: AppColors.zinc100),
+                  keyboardType: TextInputType.emailAddress,
+                  validator: (v) {
+                    final s = (v ?? '').trim();
+                    if (s.isEmpty) return null; // optional
+                    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(s)) {
+                      return 'Enter a valid email';
+                    }
+                    return null;
+                  },
+                ),
+              ),
+              const SizedBox(height: 12),
+              _Field(
+                label: 'Avatar color',
+                child: Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    for (final entry in kAvatarColors.entries)
+                      _ColorDot(
+                        color: entry.value,
+                        selected: _avatarColor == entry.key,
+                        onTap: () => setState(() => _avatarColor = entry.key),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              const _SectionHeading('Body'),
+              const SizedBox(height: 8),
+              _Field(
+                label: 'Date of birth',
+                child: InkWell(
+                  onTap: _pickDob,
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 14,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.zinc900,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.zinc800),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.cake_outlined,
+                          size: 16,
+                          color: AppColors.zinc500,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _dob == null
+                              ? 'Not set'
+                              : DateFormat('MMM d, y').format(_dob!),
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: _dob == null
+                                ? AppColors.zinc600
+                                : AppColors.zinc100,
+                          ),
+                        ),
+                        const Spacer(),
+                        if (_dob != null)
+                          GestureDetector(
+                            onTap: () => setState(() => _dob = null),
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 6),
+                              child: Icon(
+                                Icons.close,
+                                size: 14,
+                                color: AppColors.zinc500,
+                              ),
+                            ),
+                          ),
+                        const Icon(
+                          Icons.chevron_right,
+                          size: 18,
+                          color: AppColors.zinc500,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              _Field(
+                label: 'Sex',
+                child: Wrap(
+                  spacing: 8,
+                  children: [
+                    for (final opt in const [
+                      ('male', 'Male'),
+                      ('female', 'Female'),
+                      ('other', 'Other'),
+                    ])
+                      _SegmentChip(
+                        label: opt.$2,
+                        active: _sex == opt.$1,
+                        onTap: () =>
+                            setState(() => _sex = _sex == opt.$1 ? '' : opt.$1),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              _Field(
+                label: 'Units',
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _UnitsButton(
+                        label: 'Metric · cm/kg',
+                        active: _units == 'metric',
+                        onTap: () => _toggleUnits('metric'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _UnitsButton(
+                        label: 'Imperial · in/lb',
+                        active: _units == 'imperial',
+                        onTap: () => _toggleUnits('imperial'),
+                      ),
                     ),
                   ],
                 ),
-                child: Text(
-                  _initialsFor(_name.text),
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.w700,
-                    color: accent.computeLuminance() > 0.55
-                        ? AppColors.zinc950
-                        : Colors.white,
-                  ),
-                ),
               ),
-            ),
-            const SizedBox(height: 18),
-            const _SectionHeading('Identity'),
-            const SizedBox(height: 8),
-            _Field(
-              label: 'Display name',
-              child: TextFormField(
-                controller: _name,
-                decoration: _inputDecoration(hint: 'e.g. John Ray'),
-                style: const TextStyle(color: AppColors.zinc100),
-                textCapitalization: TextCapitalization.words,
-                onChanged: (_) => setState(() {}), // refresh initials preview
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Enter a name' : null,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _Field(
-              label: 'Email',
-              child: TextFormField(
-                controller: _email,
-                decoration: _inputDecoration(hint: 'you@example.com'),
-                style: const TextStyle(color: AppColors.zinc100),
-                keyboardType: TextInputType.emailAddress,
-                validator: (v) {
-                  final s = (v ?? '').trim();
-                  if (s.isEmpty) return null; // optional
-                  if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(s)) {
-                    return 'Enter a valid email';
-                  }
-                  return null;
-                },
-              ),
-            ),
-            const SizedBox(height: 12),
-            _Field(
-              label: 'Avatar color',
-              child: Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  for (final entry in kAvatarColors.entries)
-                    _ColorDot(
-                      color: entry.value,
-                      selected: _avatarColor == entry.key,
-                      onTap: () =>
-                          setState(() => _avatarColor = entry.key),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            const _SectionHeading('Body'),
-            const SizedBox(height: 8),
-            _Field(
-              label: 'Date of birth',
-              child: InkWell(
-                onTap: _pickDob,
-                borderRadius: BorderRadius.circular(10),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 14,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.zinc900,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.zinc800),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.cake_outlined,
-                        size: 16,
-                        color: AppColors.zinc500,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        _dob == null
-                            ? 'Not set'
-                            : DateFormat('MMM d, y').format(_dob!),
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: _dob == null
-                              ? AppColors.zinc600
-                              : AppColors.zinc100,
-                        ),
-                      ),
-                      const Spacer(),
-                      if (_dob != null)
-                        GestureDetector(
-                          onTap: () => setState(() => _dob = null),
-                          child: const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 6),
-                            child: Icon(
-                              Icons.close,
-                              size: 14,
-                              color: AppColors.zinc500,
-                            ),
-                          ),
-                        ),
-                      const Icon(
-                        Icons.chevron_right,
-                        size: 18,
-                        color: AppColors.zinc500,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            _Field(
-              label: 'Sex',
-              child: Wrap(
-                spacing: 8,
-                children: [
-                  for (final opt in const [
-                    ('male', 'Male'),
-                    ('female', 'Female'),
-                    ('other', 'Other'),
-                  ])
-                    _SegmentChip(
-                      label: opt.$2,
-                      active: _sex == opt.$1,
-                      onTap: () => setState(
-                        () => _sex = _sex == opt.$1 ? '' : opt.$1,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            _Field(
-              label: 'Units',
-              child: Row(
+              const SizedBox(height: 12),
+              Row(
                 children: [
                   Expanded(
-                    child: _UnitsButton(
-                      label: 'Metric · cm/kg',
-                      active: _units == 'metric',
-                      onTap: () => _toggleUnits('metric'),
+                    child: _Field(
+                      label: 'Height (${_units == 'imperial' ? 'in' : 'cm'})',
+                      child: TextFormField(
+                        controller: _heightInput,
+                        decoration: _inputDecoration(
+                          hint: _units == 'imperial' ? '70' : '175',
+                        ),
+                        style: const TextStyle(color: AppColors.zinc100),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        inputFormatters: [_decimalInputFormatter],
+                        onChanged: _readHeight,
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   Expanded(
-                    child: _UnitsButton(
-                      label: 'Imperial · in/lb',
-                      active: _units == 'imperial',
-                      onTap: () => _toggleUnits('imperial'),
+                    child: _Field(
+                      label: 'Weight (${_units == 'imperial' ? 'lb' : 'kg'})',
+                      child: TextFormField(
+                        controller: _weightInput,
+                        decoration: _inputDecoration(
+                          hint: _units == 'imperial' ? '155' : '70',
+                        ),
+                        style: const TextStyle(color: AppColors.zinc100),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        inputFormatters: [_decimalInputFormatter],
+                        onChanged: _readWeight,
+                      ),
                     ),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _Field(
-                    label: 'Height (${_units == 'imperial' ? 'in' : 'cm'})',
-                    child: TextFormField(
-                      controller: _heightInput,
-                      decoration: _inputDecoration(
-                        hint: _units == 'imperial' ? '70' : '175',
+              const SizedBox(height: 20),
+              const _SectionHeading('Preferences'),
+              const SizedBox(height: 8),
+              _Field(
+                label: 'Default currency',
+                child: TextFormField(
+                  controller: _currency,
+                  decoration: _inputDecoration(
+                    hint: 'USD',
+                    suffix: PopupMenuButton<String>(
+                      icon: const Icon(
+                        Icons.arrow_drop_down,
+                        color: AppColors.zinc500,
                       ),
-                      style: const TextStyle(color: AppColors.zinc100),
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      inputFormatters: [_decimalInputFormatter],
-                      onChanged: _readHeight,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _Field(
-                    label: 'Weight (${_units == 'imperial' ? 'lb' : 'kg'})',
-                    child: TextFormField(
-                      controller: _weightInput,
-                      decoration: _inputDecoration(
-                        hint: _units == 'imperial' ? '155' : '70',
-                      ),
-                      style: const TextStyle(color: AppColors.zinc100),
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      inputFormatters: [_decimalInputFormatter],
-                      onChanged: _readWeight,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            const _SectionHeading('Preferences'),
-            const SizedBox(height: 8),
-            _Field(
-              label: 'Default currency',
-              child: TextFormField(
-                controller: _currency,
-                decoration: _inputDecoration(
-                  hint: 'USD',
-                  suffix: PopupMenuButton<String>(
-                    icon: const Icon(
-                      Icons.arrow_drop_down,
-                      color: AppColors.zinc500,
-                    ),
-                    color: AppColors.zinc900,
-                    onSelected: (v) =>
-                        setState(() => _currency.text = v),
-                    itemBuilder: (_) => [
-                      for (final c in kCurrencies)
-                        PopupMenuItem(
-                          value: c,
-                          child: Text(
-                            c,
-                            style: const TextStyle(
-                              color: AppColors.zinc100,
-                              fontSize: 13,
+                      color: AppColors.zinc900,
+                      onSelected: (v) => setState(() => _currency.text = v),
+                      itemBuilder: (_) => [
+                        for (final c in kCurrencies)
+                          PopupMenuItem(
+                            value: c,
+                            child: Text(
+                              c,
+                              style: const TextStyle(
+                                color: AppColors.zinc100,
+                                fontSize: 13,
+                              ),
                             ),
                           ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                style: const TextStyle(
-                  color: AppColors.zinc100,
-                  letterSpacing: 1,
-                  fontWeight: FontWeight.w600,
-                ),
-                textCapitalization: TextCapitalization.characters,
-                maxLength: 3,
-                buildCounter: (_, {required currentLength, required isFocused, maxLength}) =>
-                    null,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(
-                    RegExp(r'[A-Za-z]'),
+                  style: const TextStyle(
+                    color: AppColors.zinc100,
+                    letterSpacing: 1,
+                    fontWeight: FontWeight.w600,
                   ),
-                ],
+                  textCapitalization: TextCapitalization.characters,
+                  maxLength: 3,
+                  buildCounter:
+                      (
+                        _, {
+                        required currentLength,
+                        required isFocused,
+                        maxLength,
+                      }) => null,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z]')),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
-            PrimaryButton(label: 'Save changes', onPressed: _save),
-          ],
+              const SizedBox(height: 24),
+              PrimaryButton(label: 'Save changes', onPressed: _save),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -549,10 +555,7 @@ InputDecoration _inputDecoration({String? hint, Widget? suffix}) =>
       fillColor: AppColors.zinc900,
       isDense: true,
       suffixIcon: suffix,
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 14,
-      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
         borderSide: const BorderSide(color: AppColors.zinc800),

@@ -95,8 +95,7 @@ class _TrackerBottomNavState extends State<TrackerBottomNav> {
     final left = p.pixels > 1;
     // hasContentDimensions==false right after a rebuild that shrinks the
     // content; treat that as no right arrow to avoid a single-frame ghost.
-    final right =
-        p.hasContentDimensions && p.pixels < p.maxScrollExtent - 1;
+    final right = p.hasContentDimensions && p.pixels < p.maxScrollExtent - 1;
     if (left != _canLeft || right != _canRight) {
       setState(() {
         _canLeft = left;
@@ -121,9 +120,11 @@ class _TrackerBottomNavState extends State<TrackerBottomNav> {
   /// Pulled from AppState; falls back to all five when state is loading.
   List<int> _pinnedMiddle(BuildContext context) {
     final p = context.watch<AppState>().data?.profile;
-    final pinned = p?.pinnedNavTabs.toSet() ??
-        kAllMiddleTabIndices.toSet();
-    return [for (final i in kAllMiddleTabIndices) if (pinned.contains(i)) i];
+    final pinned = p?.pinnedNavTabs.toSet() ?? kAllMiddleTabIndices.toSet();
+    return [
+      for (final i in kAllMiddleTabIndices)
+        if (pinned.contains(i)) i,
+    ];
   }
 
   @override

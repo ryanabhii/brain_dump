@@ -641,16 +641,14 @@ class _AddSubscriptionSheetState extends State<_AddSubscriptionSheet> {
               templates: app.data!.subscriptionTemplates,
               accent: AppColors.rose400,
               labelOf: (t) => t.name,
-              subtitleOf: (t) =>
-                  '\$${t.cost.toStringAsFixed(2)} · ${t.type}',
+              subtitleOf: (t) => '\$${t.cost.toStringAsFixed(2)} · ${t.type}',
               iconOf: (_) => Icons.credit_card,
               onPick: _applyTemplate,
             ),
             AppAutocompleteField(
               controller: _name,
               hint: 'Name (e.g. Netflix)',
-              options:
-                  app.suggestionsFor(SuggestionField.subscription),
+              options: app.suggestionsFor(SuggestionField.subscription),
             ),
             const SizedBox(height: 12),
             _field(
@@ -670,8 +668,7 @@ class _AddSubscriptionSheetState extends State<_AddSubscriptionSheet> {
             AppAutocompleteField(
               controller: _category,
               hint: 'Category',
-              options:
-                  app.suggestionsFor(SuggestionField.spendCategory),
+              options: app.suggestionsFor(SuggestionField.spendCategory),
             ),
             const SizedBox(height: 12),
             _field(

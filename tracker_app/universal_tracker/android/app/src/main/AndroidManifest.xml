@@ -8,9 +8,9 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <!-- Allow reminders to fire while the device is in low-power idle. -->
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
-    <!-- Voice brain dumps: speech_to_text records the mic and transcribes it
-         on-device (Android SpeechRecognizer). Audio is not stored \u2014 only the
-         resulting text. -->
+    <!-- Voice brain dumps: transcribed on-device (Android SpeechRecognizer);
+         the recording is also saved to the app's private documents folder,
+         on-device only, so the note can be replayed. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <application
         android:label="Tracker"

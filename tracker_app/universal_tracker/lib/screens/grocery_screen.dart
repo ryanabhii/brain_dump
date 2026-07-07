@@ -669,8 +669,7 @@ class _GroceryAddSheetState extends State<_GroceryAddSheet> {
               child: AppAutocompleteField(
                 controller: _category,
                 hint: 'Category',
-                options:
-                    app.suggestionsFor(SuggestionField.groceryCategory),
+                options: app.suggestionsFor(SuggestionField.groceryCategory),
               ),
             ),
           ],

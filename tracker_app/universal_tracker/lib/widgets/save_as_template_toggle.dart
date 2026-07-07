@@ -45,9 +45,7 @@ class SaveAsTemplateToggle extends StatelessWidget {
           child: Row(
             children: [
               Icon(
-                value
-                    ? Icons.bookmark_added
-                    : Icons.bookmark_add_outlined,
+                value ? Icons.bookmark_added : Icons.bookmark_add_outlined,
                 size: 16,
                 color: disabled
                     ? AppColors.zinc700
@@ -65,9 +63,7 @@ class SaveAsTemplateToggle extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                         color: disabled
                             ? AppColors.zinc600
-                            : (value
-                                ? AppColors.cyan300
-                                : AppColors.zinc300),
+                            : (value ? AppColors.cyan300 : AppColors.zinc300),
                       ),
                     ),
                     if (disabled) ...[

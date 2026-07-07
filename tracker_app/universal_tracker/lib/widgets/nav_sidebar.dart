@@ -17,14 +17,18 @@ class NavSidebar extends StatelessWidget {
   /// transition feels snappy.
   final ValueChanged<int> onTap;
 
-  const NavSidebar({super.key, required this.currentIndex, required this.onTap});
+  const NavSidebar({
+    super.key,
+    required this.currentIndex,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
     final profile = app.data?.profile;
-    final pinned = profile?.pinnedNavTabs.toSet() ??
-        kAllMiddleTabIndices.toSet();
+    final pinned =
+        profile?.pinnedNavTabs.toSet() ?? kAllMiddleTabIndices.toSet();
     return Drawer(
       backgroundColor: AppColors.zinc950,
       shape: const RoundedRectangleBorder(
@@ -67,8 +71,7 @@ class NavSidebar extends StatelessWidget {
                       // Home + Profile are always rendered in the bottom nav,
                       // so they show a small "always shown" hint instead of
                       // a pin button.
-                      pinnable:
-                          kAllMiddleTabIndices.contains(tab.index),
+                      pinnable: kAllMiddleTabIndices.contains(tab.index),
                       pinned: pinned.contains(tab.index),
                       onTap: () {
                         Navigator.of(context).pop();
@@ -83,8 +86,11 @@ class NavSidebar extends StatelessWidget {
               padding: EdgeInsets.fromLTRB(20, 8, 20, 16),
               child: Row(
                 children: [
-                  Icon(Icons.lightbulb_outline,
-                      size: 14, color: AppColors.zinc600),
+                  Icon(
+                    Icons.lightbulb_outline,
+                    size: 14,
+                    color: AppColors.zinc600,
+                  ),
                   SizedBox(width: 6),
                   Expanded(
                     child: Text(
@@ -230,11 +236,7 @@ class _AlwaysPinnedBadge extends StatelessWidget {
     message: 'Always in the bottom bar',
     child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: Icon(
-        Icons.lock_outline,
-        size: 14,
-        color: AppColors.zinc600,
-      ),
+      child: Icon(Icons.lock_outline, size: 14, color: AppColors.zinc600),
     ),
   );
 }

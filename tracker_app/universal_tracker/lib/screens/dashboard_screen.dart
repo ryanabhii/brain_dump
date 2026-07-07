@@ -54,11 +54,7 @@ const List<HomeTileSpec> kHomeTiles = [
     label: 'Streak',
     icon: Icons.local_fire_department,
   ),
-  HomeTileSpec(
-    key: 'body',
-    label: 'Body · macros',
-    icon: Icons.fitness_center,
-  ),
+  HomeTileSpec(key: 'body', label: 'Body · macros', icon: Icons.fitness_center),
   HomeTileSpec(
     key: 'quickDump',
     label: 'Quick brain dump',
@@ -354,16 +350,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Icon(
                   Icons.trending_up,
                   size: 14,
-                  color: active != null
-                      ? AppColors.rose400
-                      : AppColors.zinc400,
+                  color: active != null ? AppColors.rose400 : AppColors.zinc400,
                 ),
                 const SizedBox(width: 6),
                 SectionLabel(
                   active != null ? 'Live session' : 'Next killzone',
-                  color: active != null
-                      ? AppColors.rose400
-                      : AppColors.zinc400,
+                  color: active != null ? AppColors.rose400 : AppColors.zinc400,
                 ),
               ],
             ),
@@ -378,10 +370,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               Text(
                 'In progress · ends ${fmtTime(active.endMin as int)}',
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: AppColors.zinc400,
-                ),
+                style: const TextStyle(fontSize: 14, color: AppColors.zinc400),
               ),
             ] else if (upcoming != null) ...[
               Text(
@@ -501,8 +490,11 @@ class _EmptyDashboardHint extends StatelessWidget {
       children: [
         const Row(
           children: [
-            Icon(Icons.dashboard_customize_outlined,
-                size: 16, color: AppColors.cyan400),
+            Icon(
+              Icons.dashboard_customize_outlined,
+              size: 16,
+              color: AppColors.cyan400,
+            ),
             SizedBox(width: 8),
             Text(
               'No tiles to show',
@@ -598,9 +590,7 @@ class _EditTilesSheet extends StatelessWidget {
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.cyan300,
-                ),
+                style: TextButton.styleFrom(foregroundColor: AppColors.cyan300),
                 child: const Text(
                   'Done',
                   style: TextStyle(fontWeight: FontWeight.w700),

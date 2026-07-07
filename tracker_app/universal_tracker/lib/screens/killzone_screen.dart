@@ -642,8 +642,7 @@ class _KzAddSheetState extends State<_KzAddSheet> {
           templates: app.data!.killzoneTemplates,
           accent: AppColors.violet400,
           labelOf: (t) => t.name,
-          subtitleOf: (t) =>
-              '${fmtTime(t.startMin)} – ${fmtTime(t.endMin)}',
+          subtitleOf: (t) => '${fmtTime(t.startMin)} – ${fmtTime(t.endMin)}',
           iconOf: (_) => Icons.trending_up,
           onPick: _applyTemplate,
         ),

@@ -1,3 +1,10 @@
+/// Heading inserted into a dump's note text when the user merges the voice
+/// transcript into it (Capture → transcribe button). Everything above the
+/// marker is the user's own writing; below it is (initially) recognized
+/// speech, editable like any other text. Its presence also tells the UI the
+/// transcript has already been merged.
+const String kTranscriptMarker = '— Transcribed audio —';
+
 /// A captured thought — text, or a voice note transcribed on-device. The
 /// legacy `video` payload is preserved opaquely without being modelled yet,
 /// since that feature is still deferred.
@@ -23,6 +30,9 @@ class BrainDump {
 
   final Map<String, dynamic>? video;
 
+  /// UTC ISO-8601 of the last content change (stamped centrally on commit).
+  final String? updatedAt;
+
   const BrainDump({
     required this.id,
     this.type = 'text',
@@ -34,6 +44,7 @@ class BrainDump {
     this.voiceTranscript,
     this.voiceAudioPath,
     this.video,
+    this.updatedAt,
   });
 
   factory BrainDump.fromJson(Map<String, dynamic> j) => BrainDump(
@@ -47,6 +58,7 @@ class BrainDump {
     voiceTranscript: j['voiceTranscript'] as String?,
     voiceAudioPath: j['voiceAudioPath'] as String?,
     video: j['video'] as Map<String, dynamic>?,
+    updatedAt: j['updatedAt'] as String?,
   );
 
   Map<String, dynamic> toJson() => {
@@ -60,6 +72,7 @@ class BrainDump {
     if (voiceTranscript != null) 'voiceTranscript': voiceTranscript,
     if (voiceAudioPath != null) 'voiceAudioPath': voiceAudioPath,
     if (video != null) 'video': video,
+    if (updatedAt != null) 'updatedAt': updatedAt,
   };
 
   BrainDump copyWith({bool? completed, String? text, String? tag}) => BrainDump(
@@ -73,5 +86,6 @@ class BrainDump {
     voiceTranscript: voiceTranscript,
     voiceAudioPath: voiceAudioPath,
     video: video,
+    updatedAt: updatedAt,
   );
 }

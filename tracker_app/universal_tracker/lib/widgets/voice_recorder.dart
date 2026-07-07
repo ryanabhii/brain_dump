@@ -163,8 +163,8 @@ class _VoiceRecorderState extends State<VoiceRecorder>
   }
 
   String _humanizeError(String raw) => switch (raw) {
-    'error_permission' || 'permission' =>
-      'Microphone permission denied. Enable it in Settings.',
+    'error_permission' ||
+    'permission' => 'Microphone permission denied. Enable it in Settings.',
     'error_no_match' => "Didn't catch that — try again.",
     'error_speech_timeout' => 'Stopped listening (no speech detected).',
     'error_network' => 'Network needed for speech on this device.',
@@ -241,9 +241,7 @@ class _VoiceRecorderState extends State<VoiceRecorder>
             final words = r.recognizedWords.trim();
             if (words.isNotEmpty) {
               setState(() {
-                _finalized = _finalized.isEmpty
-                    ? words
-                    : '$_finalized $words';
+                _finalized = _finalized.isEmpty ? words : '$_finalized $words';
                 _partial = '';
               });
             } else {
@@ -310,7 +308,14 @@ class _VoiceRecorderState extends State<VoiceRecorder>
       _listening = false;
     });
     final transcript = ('$_finalized $_partial').trim();
-    if (transcript.isNotEmpty) widget.onStopped(transcript, finalPath);
+    // The recording is the primary artifact: hand the capture over whenever
+    // we have EITHER audio or words. An audio-only note (recognizer heard
+    // nothing) is still worth saving — the user can replay it.
+    if (transcript.isNotEmpty || finalPath != null) {
+      widget.onStopped(transcript, finalPath);
+    } else {
+      widget.onError?.call('Nothing captured — try again.');
+    }
   }
 
   @override
@@ -364,7 +369,8 @@ class _VoiceRecorderState extends State<VoiceRecorder>
                     const SizedBox(height: 2),
                     Text(
                       displayText.isEmpty
-                          ? 'On-device · no audio is stored'
+                          ? 'Transcribed on-device · recording kept on '
+                                'this device'
                           : displayText,
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
@@ -430,9 +436,7 @@ class _MicButton extends StatelessWidget {
       child: AnimatedBuilder(
         animation: pulse,
         builder: (_, _) {
-          final t = listening
-              ? 1.0
-              : 0.0; // 1 while listening, 0 otherwise
+          final t = listening ? 1.0 : 0.0; // 1 while listening, 0 otherwise
           final halo = listening
               ? (8 + 14 * (pulse.value * 0.4 + level * 0.6))
               : 0.0;
@@ -442,11 +446,7 @@ class _MicButton extends StatelessWidget {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Color.lerp(
-                AppColors.a(accent, 0.18),
-                accent,
-                t,
-              ),
+              color: Color.lerp(AppColors.a(accent, 0.18), accent, t),
               boxShadow: listening
                   ? [
                       BoxShadow(
@@ -471,15 +471,18 @@ class _MicButton extends StatelessWidget {
 
 /// Modal that asks the user to title a freshly-captured voice note. Shows the
 /// transcript as read-only context underneath so the user can glance at what
-/// they said while naming it. Returns `null` if the user cancels.
+/// they said while naming it (hidden when the recognizer heard nothing — an
+/// audio-only note is still savable). Returns `null` if the user cancels.
 Future<String?> promptForVoiceTitle(
   BuildContext context, {
   required String transcript,
   Color accent = AppColors.violet500,
 }) {
   // Seed the title input with the first ~6 words so the user can accept or
-  // tweak rather than typing from scratch.
-  final seed = _seedTitleFrom(transcript);
+  // tweak rather than typing from scratch. Audio-only captures (nothing
+  // recognized) get a generic seed so plain "Save" still keeps the recording.
+  var seed = _seedTitleFrom(transcript);
+  if (seed.isEmpty) seed = 'Voice note';
   final controller = TextEditingController(text: seed);
   controller.selection = TextSelection(
     baseOffset: 0,
@@ -492,9 +495,7 @@ Future<String?> promptForVoiceTitle(
     builder: (ctx) {
       return Dialog(
         backgroundColor: AppColors.zinc950,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
           child: Padding(
@@ -561,44 +562,55 @@ Future<String?> promptForVoiceTitle(
                   ),
                 ),
                 const SizedBox(height: 14),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.a(AppColors.zinc100, 0.04),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: AppColors.a(AppColors.zinc100, 0.06),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'TRANSCRIPT',
-                        style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1.1,
-                          color: AppColors.zinc500,
-                        ),
+                if (transcript.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.a(AppColors.zinc100, 0.04),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: AppColors.a(AppColors.zinc100, 0.06),
                       ),
-                      const SizedBox(height: 6),
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxHeight: 120),
-                        child: SingleChildScrollView(
-                          child: Text(
-                            transcript,
-                            style: const TextStyle(
-                              fontSize: 12.5,
-                              height: 1.45,
-                              color: AppColors.zinc300,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'TRANSCRIPT',
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.1,
+                            color: AppColors.zinc500,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxHeight: 120),
+                          child: SingleChildScrollView(
+                            child: Text(
+                              transcript,
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                height: 1.45,
+                                color: AppColors.zinc300,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
+                  )
+                else
+                  const Text(
+                    'No speech was recognized — the recording is still '
+                    'saved and can be replayed from the note.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      height: 1.4,
+                      color: AppColors.zinc500,
+                    ),
                   ),
-                ),
                 const SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,

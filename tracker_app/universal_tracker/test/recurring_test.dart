@@ -32,11 +32,7 @@ void main() {
             completed: false,
             recurring: 'weekly',
           ),
-          const GroceryItem(
-            id: 'c',
-            name: 'Bread',
-            completed: true,
-          ),
+          const GroceryItem(id: 'c', name: 'Bread', completed: true),
         ],
       );
       final out = applyWeeklyRecurring(g, now);

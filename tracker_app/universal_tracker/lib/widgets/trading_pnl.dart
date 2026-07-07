@@ -776,8 +776,8 @@ class _FlowAddSheetState extends State<_FlowAddSheet> {
           _alsoTemplate
               ? '${_type == 'deposit' ? 'Deposit' : 'Withdrawal'} logged · template saved'
               : _type == 'deposit'
-                  ? 'Deposit logged'
-                  : 'Withdrawal logged',
+              ? 'Deposit logged'
+              : 'Withdrawal logged',
         ),
         duration: const Duration(milliseconds: 1400),
       ),

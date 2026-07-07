@@ -131,12 +131,74 @@ class _DumpCard extends StatelessWidget {
   final BrainDump item;
   const _DumpCard({required this.item});
 
+  /// Open the note editor. [appendTranscript] seeds it with the transcript
+  /// under a marker heading, ADDED BELOW the user's existing text — merging
+  /// never overwrites what they typed, and the result is editable before
+  /// anything is saved.
+  void _openEditor(BuildContext context, {bool appendTranscript = false}) {
+    final seed = appendTranscript
+        ? '${item.text.trimRight()}\n\n$kTranscriptMarker\n'
+              '${item.voiceTranscript ?? ''}'
+        : item.text;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _EditDumpSheet(id: item.id, initialText: seed),
+    );
+  }
+
+  /// Delete the note. Notes with a recording get a confirmation first — the
+  /// audio file is removed with them and can't be recovered.
+  Future<void> _delete(BuildContext context) async {
+    final app = context.read<AppState>();
+    final path = item.voiceAudioPath;
+    final hasAudio = path != null && path.isNotEmpty;
+    if (hasAudio) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Delete voice note?'),
+          content: const Text(
+            'This also deletes its recording — it can\'t be recovered.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: AppColors.zinc400),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text(
+                'Delete',
+                style: TextStyle(color: AppColors.rose400),
+              ),
+            ),
+          ],
+        ),
+      );
+      if (ok != true) return;
+      unawaited(File(path).delete().catchError((_) => File(path)));
+    }
+    app.removeDump(item.id);
+  }
+
   @override
   Widget build(BuildContext context) {
     final app = context.read<AppState>();
     final (tagBg, tagFg) = _tagColors(item.tag);
     final dest = item.completed ? null : autoRoute(item.text);
     final created = DateFormat('MMM d').format(DateTime.parse(item.createdAt));
+    // Transcript already merged into the note text? Then the card shows it
+    // there — no second italic preview, no transcribe button.
+    final transcriptMerged = item.text.contains(kTranscriptMarker);
+    final canTranscribe =
+        item.type == 'voice' &&
+        !transcriptMerged &&
+        (item.voiceTranscript?.isNotEmpty ?? false);
 
     return Opacity(
       opacity: item.completed ? 0.5 : 1,
@@ -187,19 +249,28 @@ class _DumpCard extends StatelessWidget {
                         ),
                       ],
                       Expanded(
-                        child: Text(
-                          item.text,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: item.type == 'voice'
-                                ? FontWeight.w600
-                                : FontWeight.w400,
-                            color: item.completed
-                                ? AppColors.zinc500
-                                : AppColors.zinc100,
-                            decoration: item.completed
-                                ? TextDecoration.lineThrough
-                                : null,
+                        // Tap the note text to edit it — also how transcript
+                        // text gets fixed up after a merge.
+                        child: GestureDetector(
+                          onTap: item.completed
+                              ? null
+                              : () => _openEditor(context),
+                          child: Text(
+                            item.text,
+                            maxLines: 8,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: item.type == 'voice'
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
+                              color: item.completed
+                                  ? AppColors.zinc500
+                                  : AppColors.zinc100,
+                              decoration: item.completed
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                            ),
                           ),
                         ),
                       ),
@@ -216,11 +287,39 @@ class _DumpCard extends StatelessWidget {
                               ? AppColors.zinc600
                               : AppColors.violet400,
                         ),
+                      // Merge the voice transcript into the editable note
+                      // text (below a marker, never replacing user text).
+                      // Disappears once merged.
+                      if (canTranscribe)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4),
+                          child: InkResponse(
+                            onTap: () =>
+                                _openEditor(context, appendTranscript: true),
+                            radius: 16,
+                            child: Tooltip(
+                              message: 'Add transcript to note',
+                              child: Padding(
+                                padding: const EdgeInsets.all(4),
+                                child: Icon(
+                                  Icons.notes_rounded,
+                                  size: 20,
+                                  color: item.completed
+                                      ? AppColors.zinc600
+                                      : AppColors.violet400,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                   // Voice notes: show a soft "quote" of the transcript so the
                   // user can recall the full thought without tapping in.
+                  // Hidden once merged into the note text (it'd be shown
+                  // twice otherwise).
                   if (item.type == 'voice' &&
+                      !transcriptMerged &&
                       item.voiceTranscript != null &&
                       item.voiceTranscript!.isNotEmpty) ...[
                     const SizedBox(height: 4),
@@ -333,7 +432,7 @@ class _DumpCard extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             GestureDetector(
-              onTap: () => app.removeDump(item.id),
+              onTap: () => _delete(context),
               child: const Icon(
                 Icons.delete_outline,
                 size: 18,
@@ -459,9 +558,8 @@ class _BrainAddSheetState extends State<_BrainAddSheet> {
     super.dispose();
   }
 
-  String? _reminderAt() => _reminderIdx == null
-      ? null
-      : todayPlus(_reminders[_reminderIdx!].$2);
+  String? _reminderAt() =>
+      _reminderIdx == null ? null : todayPlus(_reminders[_reminderIdx!].$2);
 
   /// Text-path save. Voice flow has its own end-to-end handler so the title
   /// prompt + transcript stay in one place.
@@ -483,14 +581,11 @@ class _BrainAddSheetState extends State<_BrainAddSheet> {
     );
   }
 
-  /// Called once the voice recorder stops with a non-empty transcript. Opens
-  /// the title dialog, then commits a `voice`-type dump that carries the
-  /// transcript and (when available) the locally-saved audio path so the
-  /// user can play it back later.
-  Future<void> _handleVoiceCapture(
-    String transcript,
-    String? audioPath,
-  ) async {
+  /// Called once the voice recorder stops with a transcript, a saved
+  /// recording, or both. Opens the title dialog, then commits a `voice`-type
+  /// dump carrying whatever was captured — an audio-only note (recognizer
+  /// heard nothing) is still saved so the user can replay it later.
+  Future<void> _handleVoiceCapture(String transcript, String? audioPath) async {
     final messenger = ScaffoldMessenger.of(context);
     final app = context.read<AppState>();
     final title = await promptForVoiceTitle(
@@ -518,7 +613,7 @@ class _BrainAddSheetState extends State<_BrainAddSheet> {
       tag: _tag,
       reminderAt: _reminderAt(),
       type: 'voice',
-      voiceTranscript: transcript,
+      voiceTranscript: transcript.isEmpty ? null : transcript,
       voiceAudioPath: audioPath,
     );
     if (!mounted) return;
@@ -538,10 +633,7 @@ class _BrainAddSheetState extends State<_BrainAddSheet> {
   void _surfaceVoiceError(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        duration: const Duration(seconds: 3),
-      ),
+      SnackBar(content: Text(message), duration: const Duration(seconds: 3)),
     );
   }
 
@@ -652,6 +744,57 @@ class _ChoiceChip extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// Bottom sheet for editing a dump's note text. Also the landing spot of the
+/// transcribe flow: the caller seeds [initialText] with the transcript under
+/// the [kTranscriptMarker] heading, appended below the user's own text, and
+/// nothing is persisted until the user reviews (and freely edits) it here.
+class _EditDumpSheet extends StatefulWidget {
+  final String id;
+  final String initialText;
+  const _EditDumpSheet({required this.id, required this.initialText});
+
+  @override
+  State<_EditDumpSheet> createState() => _EditDumpSheetState();
+}
+
+class _EditDumpSheetState extends State<_EditDumpSheet> {
+  late final TextEditingController _text = TextEditingController(
+    text: widget.initialText,
+  );
+
+  @override
+  void dispose() {
+    _text.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final text = _text.text.trim();
+    if (text.isEmpty) return;
+    final messenger = ScaffoldMessenger.of(context);
+    context.read<AppState>().updateDumpText(widget.id, text);
+    Navigator.of(context).pop();
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text('Note updated'),
+        duration: Duration(milliseconds: 1200),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SheetShell(
+      title: 'Edit note',
+      children: [
+        AppTextField(controller: _text, hint: 'Note text', maxLines: 10),
+        const SizedBox(height: 16),
+        PrimaryButton(label: 'Save', onPressed: _save),
+      ],
+    );
+  }
 }
 
 /// Compact play/pause control rendered inline on voice dump cards. Each

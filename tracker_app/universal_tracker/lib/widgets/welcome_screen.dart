@@ -41,7 +41,7 @@ const List<WelcomePage> kWelcomePages = [
         'capture, household, and body — all in one place.',
     bullets: [
       'Everything saves on-device first. No account needed.',
-      'Sign in with Google later to back up + share tabs across devices.',
+      'Sign in with Google later to back up + sync across your devices.',
       'Pull down on any screen to sync now.',
     ],
   ),
@@ -86,8 +86,7 @@ const List<WelcomePage> kWelcomePages = [
     icon: Icons.psychology_alt,
     accent: AppColors.violet400,
     title: 'Capture',
-    subtitle:
-        'A frictionless brain dump for ideas, reminders, and follow-ups.',
+    subtitle: 'A frictionless brain dump for ideas, reminders, and follow-ups.',
     bullets: [
       'Type anywhere — tag is auto-detected (or pick one).',
       'Tap the mic to record a voice note — transcribed on-device.',
@@ -229,11 +228,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     final lo = _page.floor().clamp(0, kWelcomePages.length - 1);
     final hi = _page.ceil().clamp(0, kWelcomePages.length - 1);
     final t = _page - lo;
-    return Color.lerp(
-          kWelcomePages[lo].accent,
-          kWelcomePages[hi].accent,
-          t,
-        ) ??
+    return Color.lerp(kWelcomePages[lo].accent, kWelcomePages[hi].accent, t) ??
         kWelcomePages[lo].accent;
   }
 
@@ -248,56 +243,56 @@ class _WelcomeScreenState extends State<WelcomeScreen>
         child: Scaffold(
           backgroundColor: AppColors.zinc950,
           body: Stack(
-          children: [
-            // Ambient gradient that tints with the current page's accent.
-            Positioned.fill(child: _AmbientBackdrop(accent: _blendedAccent)),
-            SafeArea(
-              child: Column(
-                children: [
-                  _TopBar(
-                    index: _index,
-                    total: kWelcomePages.length,
-                    onSkip: _finish,
-                  ),
-                  Expanded(
-                    child: PageView.builder(
-                      controller: _controller,
-                      itemCount: kWelcomePages.length,
-                      physics: const BouncingScrollPhysics(),
-                      itemBuilder: (_, i) => _WelcomePageView(
-                        page: kWelcomePages[i],
-                        pageIndex: i,
-                        scrollPosition: _page,
+            children: [
+              // Ambient gradient that tints with the current page's accent.
+              Positioned.fill(child: _AmbientBackdrop(accent: _blendedAccent)),
+              SafeArea(
+                child: Column(
+                  children: [
+                    _TopBar(
+                      index: _index,
+                      total: kWelcomePages.length,
+                      onSkip: _finish,
+                    ),
+                    Expanded(
+                      child: PageView.builder(
+                        controller: _controller,
+                        itemCount: kWelcomePages.length,
+                        physics: const BouncingScrollPhysics(),
+                        itemBuilder: (_, i) => _WelcomePageView(
+                          page: kWelcomePages[i],
+                          pageIndex: i,
+                          scrollPosition: _page,
+                        ),
                       ),
                     ),
-                  ),
-                  _DotsIndicator(
-                    count: kWelcomePages.length,
-                    position: _page,
-                    color: _blendedAccent,
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-                    child: Row(
-                      children: [
-                        _GhostButton(
-                          label: 'Back',
-                          onTap: _index == 0 ? null : _prev,
-                        ),
-                        const Spacer(),
-                        _PrimaryButton(
-                          label: _isLast ? 'Get started' : 'Next',
-                          accent: _blendedAccent,
-                          onTap: _next,
-                        ),
-                      ],
+                    _DotsIndicator(
+                      count: kWelcomePages.length,
+                      position: _page,
+                      color: _blendedAccent,
                     ),
-                  ),
-                ],
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                      child: Row(
+                        children: [
+                          _GhostButton(
+                            label: 'Back',
+                            onTap: _index == 0 ? null : _prev,
+                          ),
+                          const Spacer(),
+                          _PrimaryButton(
+                            label: _isLast ? 'Get started' : 'Next',
+                            accent: _blendedAccent,
+                            onTap: _next,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
         ),
       ),
     );
@@ -335,10 +330,7 @@ class _AmbientBackdrop extends StatelessWidget {
           gradient: RadialGradient(
             center: const Alignment(0.95, 1.1),
             radius: 1.1,
-            colors: [
-              AppColors.a(accent, 0.10),
-              AppColors.a(accent, 0.0),
-            ],
+            colors: [AppColors.a(accent, 0.10), AppColors.a(accent, 0.0)],
             stops: const [0.0, 0.8],
           ),
         ),
@@ -512,10 +504,7 @@ class _HeroIcon extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            AppColors.a(accent, 0.22),
-            AppColors.a(accent, 0.08),
-          ],
+          colors: [AppColors.a(accent, 0.22), AppColors.a(accent, 0.08)],
         ),
         borderRadius: BorderRadius.circular(30),
         border: Border.all(color: AppColors.a(accent, 0.35), width: 1.2),

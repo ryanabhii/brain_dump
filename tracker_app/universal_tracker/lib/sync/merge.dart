@@ -73,6 +73,9 @@ MergeOutcome threeWayMerge({
       0;
 
   final ids = <String>{...b.keys, ...l.keys, ...r.keys};
+  // Every id a kept-both copy must not collide with — including items that
+  // haven't been merged into `out` yet.
+  final taken = <String>{...ids};
 
   for (final id in ids) {
     final bv = b[id];
@@ -81,22 +84,39 @@ MergeOutcome threeWayMerge({
     final lDel = deleted(localTombstones, id);
     final rDel = deleted(remoteTombstones, id);
 
-    // ── New items (not in base): added on one or both sides. ──
+    // ── Items not in base: fresh adds, or copies resurfacing after a delete
+    // (the deleting side dropped it from its base; a stale side still has it).
     if (bv == null) {
-      if (lv != null && rv != null) {
-        if (_contentEquals(lv, rv, updatedKey)) {
-          out[id] = newer(lv, rv) ? lv : rv;
+      // A durable tombstone means this id was deleted on some earlier pass.
+      // A live copy wins only if it was edited AFTER the deletion — an
+      // untouched (or timestamp-less) copy is just the stale pre-delete item
+      // echoing back from a device that hasn't caught up, and must NOT
+      // resurrect. An actual later edit still wins, keeping the no-loss rule.
+      var lvLive = lv;
+      var rvLive = rv;
+      final tomb = tombs[id];
+      if (tomb != null) {
+        String stamp(Json? x) => (x?[updatedKey] as String?) ?? '';
+        if (stamp(lvLive).compareTo(tomb) <= 0) lvLive = null;
+        if (stamp(rvLive).compareTo(tomb) <= 0) rvLive = null;
+        if (lvLive == null && rvLive == null) {
+          continue; // deletion is newest → stays deleted
+        }
+      }
+      if (lvLive != null && rvLive != null) {
+        if (_contentEquals(lvLive, rvLive, updatedKey)) {
+          out[id] = newer(lvLive, rvLive) ? lvLive : rvLive;
         } else {
           // Same id minted on both sides with different content → keep both.
-          out[id] = lv;
-          _keepBoth(out, rv, idKey);
+          out[id] = lvLive;
+          _keepBoth(out, rvLive, idKey, taken);
           conflicts++;
         }
       } else {
-        final added = lv ?? rv;
+        final added = lvLive ?? rvLive;
         if (added != null) out[id] = added;
       }
-      tombs.remove(id); // a live add cancels any stale tombstone
+      tombs.remove(id); // a surviving live copy cancels the tombstone
       continue;
     }
 
@@ -121,7 +141,7 @@ MergeOutcome threeWayMerge({
 
     // ── Both changed → clash resolution. ──
     if (lDel && rDel) {
-      tombs.putIfAbsent(id, () => DateTime.now().toIso8601String());
+      tombs.putIfAbsent(id, () => DateTime.now().toUtc().toIso8601String());
       continue; // both deleted
     }
     if (lDel && rv != null) {
@@ -142,7 +162,7 @@ MergeOutcome threeWayMerge({
         out[id] = newer(lv, rv) ? lv : rv; // same edit both sides
       } else {
         out[id] = lv; // keep both differing edits
-        _keepBoth(out, rv, idKey);
+        _keepBoth(out, rv, idKey, taken);
         conflicts++;
       }
     }
@@ -164,24 +184,44 @@ void _applySide(
   bool deleted,
 ) {
   if (deleted || value == null) {
-    tombs.putIfAbsent(id, () => DateTime.now().toIso8601String());
+    tombs.putIfAbsent(id, () => DateTime.now().toUtc().toIso8601String());
   } else {
     out[id] = value;
     tombs.remove(id);
   }
 }
 
-/// Re-id a conflicting copy so both survive, marking it for the user.
-void _keepBoth(Map<String, Json> out, Json item, String idKey) {
+/// Re-id a conflicting copy so both survive, marking it for the user. Probes
+/// [taken] (every id on any side, plus prior conflict copies) for a free id
+/// so a repeat clash on the same item can't silently overwrite an earlier
+/// kept-both copy — or be overwritten by a later-merged item.
+void _keepBoth(
+  Map<String, Json> out,
+  Json item,
+  String idKey,
+  Set<String> taken,
+) {
   final original = item[idKey] as String;
+  var candidate = '$original~conflict';
+  var n = 2;
+  while (taken.contains(candidate)) {
+    candidate = '$original~conflict$n';
+    n++;
+  }
+  taken.add(candidate);
   final copy = {...item};
-  copy[idKey] = '$original~conflict';
+  copy[idKey] = candidate;
   copy['_conflict'] = true;
-  out[copy[idKey] as String] = copy;
+  out[candidate] = copy;
 }
 
-/// Deep JSON equality ignoring the [updatedKey] at the top level (a timestamp
-/// bump alone isn't a content change).
+/// Deep JSON equality ignoring the update timestamp at the top level (a
+/// timestamp bump alone isn't a content change). Public so the commit-time
+/// stamping layer (stamp.dart) applies the exact same definition of "changed"
+/// that the merge does.
+bool contentEquals(Json a, Json b, {String updatedKey = 'updatedAt'}) =>
+    _contentEquals(a, b, updatedKey);
+
 bool _contentEquals(Json a, Json b, String updatedKey) {
   final ka = a.keys.where((k) => k != updatedKey).toList();
   final kb = b.keys.where((k) => k != updatedKey).toList();

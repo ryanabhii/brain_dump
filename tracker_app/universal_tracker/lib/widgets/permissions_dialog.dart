@@ -18,10 +18,7 @@ class PermissionsDialog extends StatefulWidget {
   const PermissionsDialog({super.key, this.firstLaunch = false});
 
   /// Convenience: open the dialog. Returns when it is dismissed.
-  static Future<void> show(
-    BuildContext context, {
-    bool firstLaunch = false,
-  }) {
+  static Future<void> show(BuildContext context, {bool firstLaunch = false}) {
     return showDialog<void>(
       context: context,
       barrierDismissible: !firstLaunch,
@@ -243,8 +240,9 @@ class _PermissionRow extends StatelessWidget {
             TextButton(
               onPressed: busy || granted ? null : onGrant,
               style: TextButton.styleFrom(
-                foregroundColor:
-                    granted ? AppColors.emerald400 : AppColors.cyan300,
+                foregroundColor: granted
+                    ? AppColors.emerald400
+                    : AppColors.cyan300,
                 padding: const EdgeInsets.symmetric(horizontal: 10),
                 minimumSize: const Size(0, 32),
               ),

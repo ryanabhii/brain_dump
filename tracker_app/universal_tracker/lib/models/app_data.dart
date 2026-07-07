@@ -111,8 +111,9 @@ class AppData {
         .toList();
     final subscriptionTemplates =
         (json['subscriptionTemplates'] as List? ?? const [])
-            .map((e) => SubscriptionTemplate.fromJson(
-                e as Map<String, dynamic>))
+            .map(
+              (e) => SubscriptionTemplate.fromJson(e as Map<String, dynamic>),
+            )
             .toList();
     final killzoneTemplates = (json['killzoneTemplates'] as List? ?? const [])
         .map((e) => KillzoneTemplate.fromJson(e as Map<String, dynamic>))
@@ -175,8 +176,9 @@ class AppData {
     'workoutTemplates': workoutTemplates.map((t) => t.toJson()).toList(),
     'groceryTemplates': groceryTemplates.map((t) => t.toJson()).toList(),
     'pantryTemplates': pantryTemplates.map((t) => t.toJson()).toList(),
-    'subscriptionTemplates':
-        subscriptionTemplates.map((t) => t.toJson()).toList(),
+    'subscriptionTemplates': subscriptionTemplates
+        .map((t) => t.toJson())
+        .toList(),
     'killzoneTemplates': killzoneTemplates.map((t) => t.toJson()).toList(),
     'flowTemplates': flowTemplates.map((t) => t.toJson()).toList(),
   };
@@ -213,8 +215,7 @@ class AppData {
     workoutTemplates: workoutTemplates ?? this.workoutTemplates,
     groceryTemplates: groceryTemplates ?? this.groceryTemplates,
     pantryTemplates: pantryTemplates ?? this.pantryTemplates,
-    subscriptionTemplates:
-        subscriptionTemplates ?? this.subscriptionTemplates,
+    subscriptionTemplates: subscriptionTemplates ?? this.subscriptionTemplates,
     killzoneTemplates: killzoneTemplates ?? this.killzoneTemplates,
     flowTemplates: flowTemplates ?? this.flowTemplates,
     extra: extra ?? this.extra,

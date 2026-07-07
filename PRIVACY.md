@@ -1,6 +1,6 @@
 # Privacy Policy — Tracker
 
-_Last updated: 2026-06-12_
+_Last updated: 2026-07-07_
 
 **Tracker** ("the app") is a local-first personal organiser developed by
 **Xenon54**. This document explains exactly what data the app collects, where
@@ -28,37 +28,48 @@ grocery items, body / nutrition logs, and reminder settings — is stored
 **locally on your device** using Android's `SharedPreferences`. It never
 leaves the device unless you opt in to Google Drive sync (see §3).
 
+### Microphone and voice notes
+
+If you grant microphone access and record a voice brain dump, two things are
+created:
+
+- **A transcript**, produced by your device's on-device speech recognizer.
+  Stored locally as part of the note.
+- **An audio recording** (`.m4a`), saved in the app's private documents
+  folder **on your device only**, so you can replay the note later.
+
+Recordings are never uploaded anywhere — they are excluded from Drive sync
+and backups. Deleting a voice note (or uninstalling the app) deletes its
+recording. Microphone access is optional; typing works without it.
+
 ## 3. Optional Google Drive sync
 
 If you sign in to Google from the Profile screen, the app uses **Google
 Sign-In** to authenticate with your account and the **Google Drive API** to
-read and write a small number of JSON files **in your own Drive**:
+read and write a small number of JSON files, all inside the hidden
+`appDataFolder` of **your own Drive** — a private area only this app can
+see, invisible to other apps and to your normal Drive file list:
 
-- **Backup file** — stored in the hidden `appDataFolder` of your Drive,
-  invisible to other apps. Contains a serialised copy of your app data.
-- **Per-tab sync files** — visible in your normal Drive (so they can be
-  shared). One JSON file per syncable section (killzones, spend, capture,
-  household, body, trading). Tagged with an `appProperties` marker so the
-  app can find them.
+- **Backup file** — a serialised copy of your app data, written when you tap
+  "Back up" and read when you tap "Restore".
+- **Per-tab sync files** — one JSON file per section you enable for sync
+  (killzones, spend, capture, household, body, trading). Signing in with the
+  same Google account on another device syncs these sections there too.
 
 These files are owned by **your Google account**. Xenon54 has no access to
-them, no copy of them, and no way to read them. You may delete them at any
-time from your Drive web interface.
+them, no copy of them, and no way to read them.
 
-The OAuth scopes requested are:
+The only OAuth scope requested is:
 
-- `https://www.googleapis.com/auth/drive` — to read/write tab files in your
-  Drive and grant share permissions to collaborators you nominate.
-- `https://www.googleapis.com/auth/drive.appdata` — to read/write the hidden
-  whole-app backup file.
+- `https://www.googleapis.com/auth/drive.appdata` — read/write access to the
+  app's own hidden data folder, and nothing else in your Drive. The app
+  cannot see, modify, or share any of your other Drive files.
 
 ## 4. Sharing with other people
 
-When you share a tab with a collaborator from the Profile screen, the app
-calls the Drive Permissions API to grant them reader or writer access to that
-tab's JSON file. The collaborator's email address is sent to Google so the
-share can be delivered. Xenon54 does not receive that email or store any
-record of the collaboration.
+The app has no sharing features. Your data is never made visible to any
+other person or account — sync is strictly between your own devices, signed
+in to your own Google account.
 
 ## 5. Notifications
 
@@ -78,7 +89,8 @@ information from children.
 - **Sign out** from Google to stop all Drive sync. Signing out also revokes
   the OAuth grant, so the next sign-in re-prompts for account selection and
   scope consent.
-- **Delete the Drive files** directly from drive.google.com.
+- **Delete the app's hidden Drive data** from Google Drive → Settings →
+  Manage apps → Tracker → "Delete hidden app data".
 - **Uninstall** the app to remove all local data from your device.
 
 ## 8. Changes to this policy

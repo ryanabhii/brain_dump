@@ -71,8 +71,7 @@ class TemplatePicker<T> extends StatelessWidget {
               ),
               const SizedBox(width: 6),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                 decoration: BoxDecoration(
                   color: AppColors.a(accent, 0.12),
                   borderRadius: BorderRadius.circular(999),
@@ -106,8 +105,7 @@ class TemplatePicker<T> extends StatelessWidget {
                 icon: icon,
                 accent: accent,
                 onTap: () => onPick(t),
-                onLongPress:
-                    onLongPress == null ? null : () => onLongPress!(t),
+                onLongPress: onLongPress == null ? null : () => onLongPress!(t),
               );
             },
           ),

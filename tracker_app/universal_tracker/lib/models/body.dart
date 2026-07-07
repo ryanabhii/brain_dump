@@ -83,6 +83,9 @@ class Meal {
   final String tag;
   final String date; // ISO-8601, set at log time (powers the activity streak)
 
+  /// UTC ISO-8601 of the last content change (stamped centrally on commit).
+  final String? updatedAt;
+
   const Meal({
     required this.id,
     required this.name,
@@ -93,6 +96,7 @@ class Meal {
     this.time = '',
     this.tag = 'meal',
     this.date = '',
+    this.updatedAt,
   });
 
   factory Meal.fromJson(Map<String, dynamic> j) => Meal(
@@ -106,6 +110,7 @@ class Meal {
     time: j['time'] as String? ?? '',
     tag: j['tag'] as String? ?? 'meal',
     date: j['date'] as String? ?? '',
+    updatedAt: j['updatedAt'] as String?,
   );
 
   Map<String, dynamic> toJson() => {
@@ -118,6 +123,7 @@ class Meal {
     'time': time,
     'tag': tag,
     'date': date,
+    if (updatedAt != null) 'updatedAt': updatedAt,
   };
 }
 

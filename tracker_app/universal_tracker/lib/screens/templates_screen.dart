@@ -74,9 +74,10 @@ class TemplatesScreen extends StatelessWidget {
                 final dur = t.defaultDurationMin > 0
                     ? '${t.defaultDurationMin.toStringAsFixed(0)} min'
                     : null;
-                return [t.focus, dur]
-                    .where((s) => s != null && s.isNotEmpty)
-                    .join(' · ');
+                return [
+                  t.focus,
+                  dur,
+                ].where((s) => s != null && s.isNotEmpty).join(' · ');
               },
               onAdd: () => _editWorkout(context, null),
               onTap: (t) => _editWorkout(context, t),
@@ -99,8 +100,7 @@ class TemplatesScreen extends StatelessWidget {
               accent: AppColors.amber400,
               items: data.pantryTemplates,
               labelOf: (t) => t.name,
-              subtitleOf: (t) =>
-                  '${t.unit} · low ≤ ${t.lowThreshold}',
+              subtitleOf: (t) => '${t.unit} · low ≤ ${t.lowThreshold}',
               onAdd: () => _editPantry(context, null),
               onTap: (t) => _editPantry(context, t),
               onDelete: app.removePantryTemplate,
@@ -173,8 +173,9 @@ class TemplatesScreen extends StatelessWidget {
       _openEditorSheet(context, _PantryTemplateEditor(template: t));
 
   Future<void> _editSubscription(
-          BuildContext context, SubscriptionTemplate? t) =>
-      _openEditorSheet(context, _SubscriptionTemplateEditor(template: t));
+    BuildContext context,
+    SubscriptionTemplate? t,
+  ) => _openEditorSheet(context, _SubscriptionTemplateEditor(template: t));
 
   Future<void> _editKillzone(BuildContext context, KillzoneTemplate? t) =>
       _openEditorSheet(context, _KillzoneTemplateEditor(template: t));
@@ -258,8 +259,10 @@ class _TemplateSection<T> extends StatelessWidget {
                   ),
                 ),
                 style: TextButton.styleFrom(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   minimumSize: const Size(0, 32),
                 ),
               ),
@@ -321,10 +324,7 @@ class _TemplateRow extends StatelessWidget {
           color: AppColors.a(AppColors.rose500, 0.18),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: const Icon(
-          Icons.delete_outline,
-          color: AppColors.rose400,
-        ),
+        child: const Icon(Icons.delete_outline, color: AppColors.rose400),
       ),
       confirmDismiss: (_) async {
         // Confirm via a tiny dialog so a slip doesn't lose work.
@@ -332,13 +332,17 @@ class _TemplateRow extends StatelessWidget {
               context: context,
               builder: (ctx) => AlertDialog(
                 backgroundColor: AppColors.zinc950,
-                title: const Text('Delete template?',
-                    style: TextStyle(fontSize: 16)),
+                title: const Text(
+                  'Delete template?',
+                  style: TextStyle(fontSize: 16),
+                ),
                 content: Text(
                   '"$label" will be removed. Logs already created from this '
                   'template keep their data.',
                   style: const TextStyle(
-                      fontSize: 13, color: AppColors.zinc400),
+                    fontSize: 13,
+                    color: AppColors.zinc400,
+                  ),
                 ),
                 actions: [
                   TextButton(
@@ -428,13 +432,13 @@ class _EditorShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SheetShell(
-        title: title,
-        children: [
-          ...children,
-          const SizedBox(height: 16),
-          PrimaryButton(label: 'Save template', onPressed: onSave),
-        ],
-      );
+    title: title,
+    children: [
+      ...children,
+      const SizedBox(height: 16),
+      PrimaryButton(label: 'Save template', onPressed: onSave),
+    ],
+  );
 }
 
 final _decimal = FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'));
@@ -500,30 +504,34 @@ class _MealTemplateEditorState extends State<_MealTemplateEditor> {
 
   @override
   Widget build(BuildContext context) => _EditorShell(
-        title: widget.template == null ? 'New meal template' : 'Edit meal',
-        onSave: _save,
+    title: widget.template == null ? 'New meal template' : 'Edit meal',
+    onSave: _save,
+    children: [
+      AppTextField(controller: _name, hint: 'Meal name'),
+      const SizedBox(height: 12),
+      const SectionLabel('Per 100g'),
+      const SizedBox(height: 8),
+      Row(
         children: [
-          AppTextField(controller: _name, hint: 'Meal name'),
-          const SizedBox(height: 12),
-          const SectionLabel('Per 100g'),
-          const SizedBox(height: 8),
-          Row(children: [
-            Expanded(child: _numField(_kcal, 'kcal')),
-            const SizedBox(width: 8),
-            Expanded(child: _numField(_protein, 'Protein g')),
-          ]),
-          const SizedBox(height: 8),
-          Row(children: [
-            Expanded(child: _numField(_carbs, 'Carbs g')),
-            const SizedBox(width: 8),
-            Expanded(child: _numField(_fat, 'Fat g')),
-          ]),
-          const SizedBox(height: 12),
-          const SectionLabel('Default serving (g)'),
-          const SizedBox(height: 8),
-          _numField(_serving, '100'),
+          Expanded(child: _numField(_kcal, 'kcal')),
+          const SizedBox(width: 8),
+          Expanded(child: _numField(_protein, 'Protein g')),
         ],
-      );
+      ),
+      const SizedBox(height: 8),
+      Row(
+        children: [
+          Expanded(child: _numField(_carbs, 'Carbs g')),
+          const SizedBox(width: 8),
+          Expanded(child: _numField(_fat, 'Fat g')),
+        ],
+      ),
+      const SizedBox(height: 12),
+      const SectionLabel('Default serving (g)'),
+      const SizedBox(height: 8),
+      _numField(_serving, '100'),
+    ],
+  );
 }
 
 class _WorkoutTemplateEditor extends StatefulWidget {
@@ -545,9 +553,10 @@ class _WorkoutTemplateEditorState extends State<_WorkoutTemplateEditor> {
     _name = TextEditingController(text: t?.name ?? '');
     _focus = TextEditingController(text: t?.focus ?? '');
     _duration = TextEditingController(
-        text: (t?.defaultDurationMin ?? 0) == 0
-            ? ''
-            : t!.defaultDurationMin.toString());
+      text: (t?.defaultDurationMin ?? 0) == 0
+          ? ''
+          : t!.defaultDurationMin.toString(),
+    );
   }
 
   @override
@@ -575,18 +584,16 @@ class _WorkoutTemplateEditorState extends State<_WorkoutTemplateEditor> {
 
   @override
   Widget build(BuildContext context) => _EditorShell(
-        title: widget.template == null
-            ? 'New workout template'
-            : 'Edit workout',
-        onSave: _save,
-        children: [
-          AppTextField(controller: _name, hint: 'Workout name'),
-          const SizedBox(height: 8),
-          AppTextField(controller: _focus, hint: 'Focus (optional)'),
-          const SizedBox(height: 8),
-          _numField(_duration, 'Default duration (min)'),
-        ],
-      );
+    title: widget.template == null ? 'New workout template' : 'Edit workout',
+    onSave: _save,
+    children: [
+      AppTextField(controller: _name, hint: 'Workout name'),
+      const SizedBox(height: 8),
+      AppTextField(controller: _focus, hint: 'Focus (optional)'),
+      const SizedBox(height: 8),
+      _numField(_duration, 'Default duration (min)'),
+    ],
+  );
 }
 
 class _GroceryTemplateEditor extends StatefulWidget {
@@ -637,18 +644,16 @@ class _GroceryTemplateEditorState extends State<_GroceryTemplateEditor> {
 
   @override
   Widget build(BuildContext context) => _EditorShell(
-        title: widget.template == null
-            ? 'New grocery template'
-            : 'Edit grocery',
-        onSave: _save,
-        children: [
-          AppTextField(controller: _name, hint: 'Item name'),
-          const SizedBox(height: 8),
-          AppTextField(controller: _category, hint: 'Category (e.g. Dairy)'),
-          const SizedBox(height: 8),
-          _intField(_qty, 'Default qty'),
-        ],
-      );
+    title: widget.template == null ? 'New grocery template' : 'Edit grocery',
+    onSave: _save,
+    children: [
+      AppTextField(controller: _name, hint: 'Item name'),
+      const SizedBox(height: 8),
+      AppTextField(controller: _category, hint: 'Category (e.g. Dairy)'),
+      const SizedBox(height: 8),
+      _intField(_qty, 'Default qty'),
+    ],
+  );
 }
 
 class _PantryTemplateEditor extends StatefulWidget {
@@ -701,22 +706,22 @@ class _PantryTemplateEditorState extends State<_PantryTemplateEditor> {
 
   @override
   Widget build(BuildContext context) => _EditorShell(
-        title: widget.template == null
-            ? 'New pantry template'
-            : 'Edit pantry',
-        onSave: _save,
+    title: widget.template == null ? 'New pantry template' : 'Edit pantry',
+    onSave: _save,
+    children: [
+      AppTextField(controller: _name, hint: 'Item name'),
+      const SizedBox(height: 8),
+      AppTextField(controller: _unit, hint: 'Unit (g, ml, unit, ...)'),
+      const SizedBox(height: 8),
+      Row(
         children: [
-          AppTextField(controller: _name, hint: 'Item name'),
-          const SizedBox(height: 8),
-          AppTextField(controller: _unit, hint: 'Unit (g, ml, unit, ...)'),
-          const SizedBox(height: 8),
-          Row(children: [
-            Expanded(child: _intField(_low, 'Low threshold')),
-            const SizedBox(width: 8),
-            Expanded(child: _intField(_start, 'Default start qty')),
-          ]),
+          Expanded(child: _intField(_low, 'Low threshold')),
+          const SizedBox(width: 8),
+          Expanded(child: _intField(_start, 'Default start qty')),
         ],
-      );
+      ),
+    ],
+  );
 }
 
 class _SubscriptionTemplateEditor extends StatefulWidget {
@@ -745,7 +750,8 @@ class _SubscriptionTemplateEditorState
     _category = TextEditingController(text: t?.category ?? 'Other');
     _cadence = TextEditingController(text: (t?.cadenceDays ?? 30).toString());
     _apiCap = TextEditingController(
-        text: (t?.apiCap ?? 0) == 0 ? '' : t!.apiCap.toString());
+      text: (t?.apiCap ?? 0) == 0 ? '' : t!.apiCap.toString(),
+    );
     _type = t?.type ?? 'subscription';
   }
 
@@ -782,36 +788,42 @@ class _SubscriptionTemplateEditorState
 
   @override
   Widget build(BuildContext context) => _EditorShell(
-        title: widget.template == null
-            ? 'New subscription template'
-            : 'Edit subscription',
-        onSave: _save,
+    title: widget.template == null
+        ? 'New subscription template'
+        : 'Edit subscription',
+    onSave: _save,
+    children: [
+      AppTextField(controller: _name, hint: 'Name (e.g. Spotify)'),
+      const SizedBox(height: 8),
+      Row(
         children: [
-          AppTextField(controller: _name, hint: 'Name (e.g. Spotify)'),
-          const SizedBox(height: 8),
-          Row(children: [
-            Expanded(child: _numField(_cost, 'Cost')),
-            const SizedBox(width: 8),
-            Expanded(child: _intField(_cadence, 'Every N days')),
-          ]),
-          const SizedBox(height: 8),
-          AppTextField(controller: _category, hint: 'Category'),
-          const SizedBox(height: 12),
-          const SectionLabel('Type'),
-          const SizedBox(height: 6),
-          Row(children: [
-            _segChip('Subscription', _type == 'subscription',
-                () => setState(() => _type = 'subscription')),
-            const SizedBox(width: 8),
-            _segChip('API', _type == 'api',
-                () => setState(() => _type = 'api')),
-          ]),
-          if (_type == 'api') ...[
-            const SizedBox(height: 8),
-            _numField(_apiCap, 'API cap (e.g. monthly \$ limit)'),
-          ],
+          Expanded(child: _numField(_cost, 'Cost')),
+          const SizedBox(width: 8),
+          Expanded(child: _intField(_cadence, 'Every N days')),
         ],
-      );
+      ),
+      const SizedBox(height: 8),
+      AppTextField(controller: _category, hint: 'Category'),
+      const SizedBox(height: 12),
+      const SectionLabel('Type'),
+      const SizedBox(height: 6),
+      Row(
+        children: [
+          _segChip(
+            'Subscription',
+            _type == 'subscription',
+            () => setState(() => _type = 'subscription'),
+          ),
+          const SizedBox(width: 8),
+          _segChip('API', _type == 'api', () => setState(() => _type = 'api')),
+        ],
+      ),
+      if (_type == 'api') ...[
+        const SizedBox(height: 8),
+        _numField(_apiCap, 'API cap (e.g. monthly \$ limit)'),
+      ],
+    ],
+  );
 }
 
 class _KillzoneTemplateEditor extends StatefulWidget {
@@ -890,46 +902,44 @@ class _KillzoneTemplateEditorState extends State<_KillzoneTemplateEditor> {
 
   @override
   Widget build(BuildContext context) => _EditorShell(
-        title: widget.template == null
-            ? 'New killzone template'
-            : 'Edit killzone',
-        onSave: _save,
+    title: widget.template == null ? 'New killzone template' : 'Edit killzone',
+    onSave: _save,
+    children: [
+      AppTextField(controller: _name, hint: 'Name (e.g. London)'),
+      const SizedBox(height: 12),
+      const SectionLabel('Window'),
+      const SizedBox(height: 6),
+      Row(
         children: [
-          AppTextField(controller: _name, hint: 'Name (e.g. London)'),
-          const SizedBox(height: 12),
-          const SectionLabel('Window'),
-          const SizedBox(height: 6),
-          Row(children: [
-            Expanded(child: _timeBtn(fmtTime(_start), () => _pickTime(true))),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8),
-              child: Text('to', style: TextStyle(color: AppColors.zinc500)),
-            ),
-            Expanded(child: _timeBtn(fmtTime(_end), () => _pickTime(false))),
-          ]),
-          const SizedBox(height: 12),
-          const SectionLabel('Accent'),
-          const SizedBox(height: 6),
-          Wrap(spacing: 8, runSpacing: 8, children: [
-            for (final c in const [
-              'amber',
-              'sky',
-              'rose',
-              'violet',
-              'emerald'
-            ])
-              _colorDot(c, _color == c, () => setState(() => _color = c)),
-          ]),
-          const SizedBox(height: 12),
-          const SectionLabel('Checklist (one per line)'),
-          const SizedBox(height: 6),
-          AppTextField(
-            controller: _checklist,
-            hint: 'HTF bias set\nNews checked\nRisk defined',
-            maxLines: 4,
+          Expanded(child: _timeBtn(fmtTime(_start), () => _pickTime(true))),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 8),
+            child: Text('to', style: TextStyle(color: AppColors.zinc500)),
           ),
+          Expanded(child: _timeBtn(fmtTime(_end), () => _pickTime(false))),
         ],
-      );
+      ),
+      const SizedBox(height: 12),
+      const SectionLabel('Accent'),
+      const SizedBox(height: 6),
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (final c in const ['amber', 'sky', 'rose', 'violet', 'emerald'])
+            _colorDot(c, _color == c, () => setState(() => _color = c)),
+        ],
+      ),
+      const SizedBox(height: 12),
+      const SectionLabel('Checklist (one per line)'),
+      const SizedBox(height: 6),
+      AppTextField(
+        controller: _checklist,
+        hint: 'HTF bias set\nNews checked\nRisk defined',
+        maxLines: 4,
+      ),
+    ],
+  );
 }
 
 class _FlowTemplateEditor extends StatefulWidget {
@@ -951,7 +961,8 @@ class _FlowTemplateEditorState extends State<_FlowTemplateEditor> {
     final t = widget.template;
     _name = TextEditingController(text: t?.name ?? '');
     _amount = TextEditingController(
-        text: (t?.amount ?? 0) == 0 ? '' : t!.amount.toString());
+      text: (t?.amount ?? 0) == 0 ? '' : t!.amount.toString(),
+    );
     _note = TextEditingController(text: t?.note ?? '');
     _type = t?.type ?? 'deposit';
   }
@@ -982,63 +993,68 @@ class _FlowTemplateEditorState extends State<_FlowTemplateEditor> {
 
   @override
   Widget build(BuildContext context) => _EditorShell(
-        title: widget.template == null
-            ? 'New flow template'
-            : 'Edit flow',
-        onSave: _save,
+    title: widget.template == null ? 'New flow template' : 'Edit flow',
+    onSave: _save,
+    children: [
+      AppTextField(controller: _name, hint: 'Name (e.g. Monthly DCA)'),
+      const SizedBox(height: 8),
+      Row(
         children: [
-          AppTextField(controller: _name, hint: 'Name (e.g. Monthly DCA)'),
-          const SizedBox(height: 8),
-          Row(children: [
-            _segChip('Deposit', _type == 'deposit',
-                () => setState(() => _type = 'deposit')),
-            const SizedBox(width: 8),
-            _segChip('Withdrawal', _type == 'withdrawal',
-                () => setState(() => _type = 'withdrawal')),
-          ]),
-          const SizedBox(height: 8),
-          _numField(_amount, 'Amount'),
-          const SizedBox(height: 8),
-          AppTextField(controller: _note, hint: 'Note (optional)'),
+          _segChip(
+            'Deposit',
+            _type == 'deposit',
+            () => setState(() => _type = 'deposit'),
+          ),
+          const SizedBox(width: 8),
+          _segChip(
+            'Withdrawal',
+            _type == 'withdrawal',
+            () => setState(() => _type = 'withdrawal'),
+          ),
         ],
-      );
+      ),
+      const SizedBox(height: 8),
+      _numField(_amount, 'Amount'),
+      const SizedBox(height: 8),
+      AppTextField(controller: _note, hint: 'Note (optional)'),
+    ],
+  );
 }
 
 // ─── Shared atoms ──────────────────────────────────────────────────────────
 
 Widget _numField(TextEditingController c, String hint) => TextField(
-      controller: c,
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      inputFormatters: [_decimal],
-      style: const TextStyle(color: AppColors.zinc100, fontSize: 14),
-      decoration: _denseInput(hint),
-    );
+  controller: c,
+  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+  inputFormatters: [_decimal],
+  style: const TextStyle(color: AppColors.zinc100, fontSize: 14),
+  decoration: _denseInput(hint),
+);
 
 Widget _intField(TextEditingController c, String hint) => TextField(
-      controller: c,
-      keyboardType: TextInputType.number,
-      inputFormatters: [_integer],
-      style: const TextStyle(color: AppColors.zinc100, fontSize: 14),
-      decoration: _denseInput(hint),
-    );
+  controller: c,
+  keyboardType: TextInputType.number,
+  inputFormatters: [_integer],
+  style: const TextStyle(color: AppColors.zinc100, fontSize: 14),
+  decoration: _denseInput(hint),
+);
 
 InputDecoration _denseInput(String hint) => InputDecoration(
-      hintText: hint,
-      hintStyle: const TextStyle(color: AppColors.zinc600, fontSize: 13),
-      filled: true,
-      fillColor: AppColors.zinc900,
-      isDense: true,
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: AppColors.zinc800),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: AppColors.cyan500, width: 1.4),
-      ),
-    );
+  hintText: hint,
+  hintStyle: const TextStyle(color: AppColors.zinc600, fontSize: 13),
+  filled: true,
+  fillColor: AppColors.zinc900,
+  isDense: true,
+  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+  enabledBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(10),
+    borderSide: const BorderSide(color: AppColors.zinc800),
+  ),
+  focusedBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(10),
+    borderSide: const BorderSide(color: AppColors.cyan500, width: 1.4),
+  ),
+);
 
 Widget _segChip(String label, bool active, VoidCallback onTap) =>
     GestureDetector(
@@ -1064,26 +1080,26 @@ Widget _segChip(String label, bool active, VoidCallback onTap) =>
     );
 
 Widget _timeBtn(String label, VoidCallback onTap) => InkWell(
-      onTap: onTap,
+  onTap: onTap,
+  borderRadius: BorderRadius.circular(10),
+  child: Container(
+    alignment: Alignment.center,
+    padding: const EdgeInsets.symmetric(vertical: 12),
+    decoration: BoxDecoration(
+      color: AppColors.zinc900,
       borderRadius: BorderRadius.circular(10),
-      child: Container(
-        alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: AppColors.zinc900,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppColors.zinc800),
-        ),
-        child: Text(
-          label,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: AppColors.zinc100,
-          ),
-        ),
+      border: Border.all(color: AppColors.zinc800),
+    ),
+    child: Text(
+      label,
+      style: const TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+        color: AppColors.zinc100,
       ),
-    );
+    ),
+  ),
+);
 
 Widget _colorDot(String name, bool active, VoidCallback onTap) {
   final color = switch (name) {

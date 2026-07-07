@@ -142,16 +142,13 @@ class GroceryTemplate {
     'defaultQty': defaultQty,
   };
 
-  GroceryTemplate copyWith({
-    String? name,
-    String? category,
-    int? defaultQty,
-  }) => GroceryTemplate(
-    id: id,
-    name: name ?? this.name,
-    category: category ?? this.category,
-    defaultQty: defaultQty ?? this.defaultQty,
-  );
+  GroceryTemplate copyWith({String? name, String? category, int? defaultQty}) =>
+      GroceryTemplate(
+        id: id,
+        name: name ?? this.name,
+        category: category ?? this.category,
+        defaultQty: defaultQty ?? this.defaultQty,
+      );
 }
 
 /// Pantry preset — stock item with a unit + the threshold at which it's
@@ -284,8 +281,9 @@ class KillzoneTemplate {
     startMin: ((j['startMin'] as num?) ?? 0).toInt(),
     endMin: ((j['endMin'] as num?) ?? 0).toInt(),
     color: j['color'] as String? ?? 'amber',
-    checklist:
-        (j['checklist'] as List? ?? const []).map((e) => e as String).toList(),
+    checklist: (j['checklist'] as List? ?? const [])
+        .map((e) => e as String)
+        .toList(),
   );
 
   Map<String, dynamic> toJson() => {
