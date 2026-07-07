@@ -102,20 +102,29 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> _load() async {
-    final loaded = await _storage.load();
-    // Re-add this week's recurring groceries if due (see applyWeeklyRecurring).
-    final recurred = applyWeeklyRecurring(loaded.groceries, DateTime.now());
-    _data = recurred == null ? loaded : loaded.copyWith(groceries: recurred);
-    notifyListeners();
-    if (recurred != null) unawaited(_storage.save(_data!));
-    unawaited(Notifications.reschedule(_data!));
-    // Build the sync engine from the persisted base + tombstones (sync
-    // metadata).
-    _engine = SyncEngine(
-      _remote,
-      base: _decodeBase(await _storage.loadSyncBase()),
-      tombstones: _decodeTombstones(await _storage.loadSyncTombstones()),
-    );
+    try {
+      final loaded = await _storage.load();
+      // Re-add this week's recurring groceries if due (see applyWeeklyRecurring).
+      final recurred = applyWeeklyRecurring(loaded.groceries, DateTime.now());
+      _data = recurred == null ? loaded : loaded.copyWith(groceries: recurred);
+      notifyListeners();
+      if (recurred != null) unawaited(_storage.save(_data!));
+      unawaited(Notifications.reschedule(_data!));
+      // Build the sync engine from the persisted base + tombstones (sync
+      // metadata).
+      _engine = SyncEngine(
+        _remote,
+        base: _decodeBase(await _storage.loadSyncBase()),
+        tombstones: _decodeTombstones(await _storage.loadSyncTombstones()),
+      );
+    } catch (e, st) {
+      // If _load() throws (e.g. a plugin class stripped by R8, a storage
+      // failure, or an unexpected JSON shape), fall back to an empty-data
+      // state so the UI is never stuck on "Loading tracker…" indefinitely.
+      debugPrint('_load() failed – falling back to defaults: $e\n$st');
+      _data ??= AppData.fromJson(buildDefaultData());
+      notifyListeners();
+    }
   }
 
   /// The single write path for local mutations: stamp `updatedAt` onto every
