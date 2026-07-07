@@ -75,7 +75,12 @@ class BrainDump {
     if (updatedAt != null) 'updatedAt': updatedAt,
   };
 
-  BrainDump copyWith({bool? completed, String? text, String? tag}) => BrainDump(
+  BrainDump copyWith({
+    bool? completed,
+    String? text,
+    String? tag,
+    String? voiceTranscript,
+  }) => BrainDump(
     id: id,
     type: type,
     text: text ?? this.text,
@@ -83,7 +88,7 @@ class BrainDump {
     reminderAt: reminderAt,
     completed: completed ?? this.completed,
     tag: tag ?? this.tag,
-    voiceTranscript: voiceTranscript,
+    voiceTranscript: voiceTranscript ?? this.voiceTranscript,
     voiceAudioPath: voiceAudioPath,
     video: video,
     updatedAt: updatedAt,

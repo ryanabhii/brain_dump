@@ -75,7 +75,8 @@ Smoke-test checklist on the release APK:
 - [ ] Enable a tab in Profile → Synced tabs; sync round-trips (reinstall or
       second device sees the data)
 - [ ] Drive backup + restore
-- [ ] Voice brain dump: record → name → replay → transcribe-into-note
+- [ ] Voice brain dump: record → name → replay → transcribe (first run
+      downloads the whisper model) → merge transcript into note
 - [ ] Killzone alert notification fires
 - [ ] Kill + relaunch: data persists
 

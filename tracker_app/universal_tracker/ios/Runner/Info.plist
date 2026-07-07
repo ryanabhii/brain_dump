@@ -66,11 +66,11 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<!-- speech_to_text needs both mic + speech recognition entitlements on
-	     iOS. Audio is not persisted; only the on-device transcript is kept. -->
+	<!-- Voice brain dumps: the recording is saved in the app's private
+	     documents folder, on-device only, for playback and on-device
+	     whisper transcription. No speech-recognition entitlement needed —
+	     transcription never touches Apple's speech services. -->
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Tracker uses the microphone to capture voice brain dumps. Audio is transcribed on-device and not stored.</string>
-	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Tracker transcribes your voice brain dumps on-device so you can search them later.</string>
+	<string>Tracker uses the microphone to capture voice brain dumps. Recordings stay on this device and are transcribed on-device.</string>
 </dict>
 </plist>

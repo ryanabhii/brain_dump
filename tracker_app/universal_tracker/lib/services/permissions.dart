@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:record/record.dart';
 
 import '../state/app_state.dart';
 import 'notifications.dart';
@@ -13,9 +13,9 @@ enum AppPermission {
   /// Powers killzone alerts, dump reminders, and the daily review nudge.
   notifications,
 
-  /// RECORD_AUDIO + (iOS) Speech Recognition. Powers voice brain dumps —
-  /// audio is transcribed on-device by [stt.SpeechToText] and the recording
-  /// is saved locally (documents/voice_notes) for later playback.
+  /// RECORD_AUDIO. Powers voice brain dumps — the recording is saved locally
+  /// (documents/voice_notes) for playback and on-device whisper
+  /// transcription; nothing leaves the device.
   microphone,
 
   /// Google account sign-in + Drive scope. Optional — only needed for the
@@ -34,8 +34,8 @@ extension AppPermissionLabel on AppPermission {
     AppPermission.notifications =>
       'Killzone alerts, brain-dump reminders, and your daily review.',
     AppPermission.microphone =>
-      'Voice brain dumps — transcribed on-device; the recording stays on '
-          'this device so you can replay it.',
+      'Voice brain dumps — the recording stays on this device so you can '
+          'replay and transcribe it (on-device).',
     AppPermission.driveSync =>
       'Sign in with Google to back up and sync tabs across your devices.',
   };
@@ -67,9 +67,9 @@ class PermissionsService {
   /// All permissions in the order they should appear in UI.
   static const List<AppPermission> all = AppPermission.values;
 
-  /// Reused [stt.SpeechToText] instance — its `initialize()` doubles as the
+  /// Reused recorder instance — its `hasPermission()` doubles as the OS
   /// permission prompt on Android/iOS and is cheap to call repeatedly.
-  final stt.SpeechToText _speech = stt.SpeechToText();
+  final AudioRecorder _recorder = AudioRecorder();
 
   /// Check (without prompting) which permissions are already granted. For
   /// notifications we can't reliably introspect on every platform, so we
@@ -88,12 +88,10 @@ class PermissionsService {
         // and the OS dialog is the source of truth.
         return PermissionOutcome.denied;
       case AppPermission.microphone:
-        // speech_to_text only reports availability once initialized; before
-        // that we conservatively show denied so the UI offers a "Grant"
-        // button instead of showing a misleading green checkmark.
-        return _speech.isAvailable
-            ? PermissionOutcome.granted
-            : PermissionOutcome.denied;
+        // `record` has no prompt-free "is granted?" check, so we
+        // conservatively show denied until [request] runs — the UI then
+        // offers a "Grant" button instead of a misleading green checkmark.
+        return PermissionOutcome.denied;
       case AppPermission.driveSync:
         return _app.driveSignedIn
             ? PermissionOutcome.granted
@@ -110,11 +108,9 @@ class PermissionsService {
           final ok = await Notifications.requestPermission();
           return ok ? PermissionOutcome.granted : PermissionOutcome.denied;
         case AppPermission.microphone:
-          // initialize() prompts the OS for mic + speech-recognition perms
-          // and returns true once both are granted and a recognizer exists.
-          final ok = await _speech.initialize(
-            onError: (e) => debugPrint('Speech init error: $e'),
-          );
+          // hasPermission() prompts the OS RECORD_AUDIO dialog when the
+          // permission hasn't been granted yet.
+          final ok = await _recorder.hasPermission();
           return ok ? PermissionOutcome.granted : PermissionOutcome.denied;
         case AppPermission.driveSync:
           if (_app.driveSignedIn) return PermissionOutcome.granted;

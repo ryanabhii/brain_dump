@@ -89,7 +89,7 @@ const List<WelcomePage> kWelcomePages = [
     subtitle: 'A frictionless brain dump for ideas, reminders, and follow-ups.',
     bullets: [
       'Type anywhere — tag is auto-detected (or pick one).',
-      'Tap the mic to record a voice note — transcribed on-device.',
+      'Tap the mic to record a voice note — transcribe it on-device anytime.',
       'Set a reminder to get a future nudge.',
       'Promote a dump to a grocery item or check it off when done.',
     ],

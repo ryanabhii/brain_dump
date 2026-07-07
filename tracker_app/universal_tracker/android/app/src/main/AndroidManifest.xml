@@ -8,9 +8,9 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <!-- Allow reminders to fire while the device is in low-power idle. -->
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
-    <!-- Voice brain dumps: transcribed on-device (Android SpeechRecognizer);
-         the recording is also saved to the app's private documents folder,
-         on-device only, so the note can be replayed. -->
+    <!-- Voice brain dumps: the recording is saved to the app's private
+         documents folder, on-device only, for playback and on-device
+         whisper transcription. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <application
         android:label="Tracker"
@@ -68,12 +68,6 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
-        </intent>
-        <!-- speech_to_text needs to find a SpeechRecognizer implementation on
-             Android 11+ (package visibility filter). Without this, isAvailable
-             returns false even when Google\u2019s recognizer is installed. -->
-        <intent>
-            <action android:name="android.speech.RecognitionService"/>
         </intent>
     </queries>
 </manifest>

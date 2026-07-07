@@ -30,13 +30,15 @@ leaves the device unless you opt in to Google Drive sync (see §3).
 
 ### Microphone and voice notes
 
-If you grant microphone access and record a voice brain dump, two things are
-created:
+If you grant microphone access and record a voice brain dump:
 
-- **A transcript**, produced by your device's on-device speech recognizer.
-  Stored locally as part of the note.
-- **An audio recording** (`.m4a`), saved in the app's private documents
+- **An audio recording** (`.m4a`) is saved in the app's private documents
   folder **on your device only**, so you can replay the note later.
+- **A transcript** is created only if you tap the transcribe button on the
+  note, and is produced **entirely on-device** by a bundled Whisper speech
+  model. Your audio is never sent anywhere for transcription. The first
+  transcription downloads the model file (~150 MB) from Hugging Face — that
+  request fetches the model only and carries none of your data or audio.
 
 Recordings are never uploaded anywhere — they are excluded from Drive sync
 and backups. Deleting a voice note (or uninstalling the app) deletes its

@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 
 import '../data/default_data.dart';
 import '../models/brain_dump.dart';
+import '../services/transcription.dart';
 import '../state/app_state.dart';
 import '../theme/colors.dart';
 import '../utils/auto_route.dart';
@@ -193,12 +194,24 @@ class _DumpCard extends StatelessWidget {
     final dest = item.completed ? null : autoRoute(item.text);
     final created = DateFormat('MMM d').format(DateTime.parse(item.createdAt));
     // Transcript already merged into the note text? Then the card shows it
-    // there — no second italic preview, no transcribe button.
+    // there — no second italic preview, no merge button.
     final transcriptMerged = item.text.contains(kTranscriptMarker);
-    final canTranscribe =
+    final hasAudio =
         item.type == 'voice' &&
+        item.voiceAudioPath != null &&
+        item.voiceAudioPath!.isNotEmpty;
+    final hasTranscript = item.voiceTranscript?.isNotEmpty ?? false;
+    // Recording without a transcript yet → offer on-device transcription
+    // (only where the whisper native libs exist).
+    final canTranscribe =
+        hasAudio &&
+        !hasTranscript &&
         !transcriptMerged &&
-        (item.voiceTranscript?.isNotEmpty ?? false);
+        TranscriptionService.supported;
+    // Transcript exists but isn't merged into the note text yet → offer the
+    // merge shortcut.
+    final canMergeTranscript =
+        item.type == 'voice' && hasTranscript && !transcriptMerged;
 
     return Opacity(
       opacity: item.completed ? 0.5 : 1,
@@ -278,10 +291,19 @@ class _DumpCard extends StatelessWidget {
                       // The button is only rendered when the file is
                       // present AND still exists on disk — if the user
                       // wiped storage, we silently degrade to text-only.
-                      if (item.type == 'voice' &&
-                          item.voiceAudioPath != null &&
-                          item.voiceAudioPath!.isNotEmpty)
+                      if (hasAudio)
                         _VoicePlayButton(
+                          path: item.voiceAudioPath!,
+                          tint: item.completed
+                              ? AppColors.zinc600
+                              : AppColors.violet400,
+                        ),
+                      // On-device transcription of the recording (whisper).
+                      // Replaced by the merge button once a transcript
+                      // exists.
+                      if (canTranscribe)
+                        _TranscribeButton(
+                          id: item.id,
                           path: item.voiceAudioPath!,
                           tint: item.completed
                               ? AppColors.zinc600
@@ -290,7 +312,7 @@ class _DumpCard extends StatelessWidget {
                       // Merge the voice transcript into the editable note
                       // text (below a marker, never replacing user text).
                       // Disappears once merged.
-                      if (canTranscribe)
+                      if (canMergeTranscript)
                         Padding(
                           padding: const EdgeInsets.only(left: 4),
                           child: InkResponse(
@@ -581,25 +603,22 @@ class _BrainAddSheetState extends State<_BrainAddSheet> {
     );
   }
 
-  /// Called once the voice recorder stops with a transcript, a saved
-  /// recording, or both. Opens the title dialog, then commits a `voice`-type
-  /// dump carrying whatever was captured — an audio-only note (recognizer
-  /// heard nothing) is still saved so the user can replay it later.
-  Future<void> _handleVoiceCapture(String transcript, String? audioPath) async {
+  /// Called once the voice recorder stops with a saved recording. Opens the
+  /// title dialog, then commits a `voice`-type dump carrying the audio.
+  /// Audio-first: there is no transcript at capture time — the user
+  /// transcribes on-device later, from the note card.
+  Future<void> _handleVoiceCapture(String audioPath) async {
     final messenger = ScaffoldMessenger.of(context);
     final app = context.read<AppState>();
     final title = await promptForVoiceTitle(
       context,
-      transcript: transcript,
       accent: AppColors.violet500,
     );
     if (!mounted) return;
     if (title == null) {
       // User cancelled the title prompt — drop the audio too so we don't
       // leak orphaned m4a files into the app's documents directory.
-      if (audioPath != null) {
-        unawaited(File(audioPath).delete().catchError((_) => File(audioPath)));
-      }
+      unawaited(File(audioPath).delete().catchError((_) => File(audioPath)));
       messenger.showSnackBar(
         const SnackBar(
           content: Text('Voice note discarded'),
@@ -613,19 +632,14 @@ class _BrainAddSheetState extends State<_BrainAddSheet> {
       tag: _tag,
       reminderAt: _reminderAt(),
       type: 'voice',
-      voiceTranscript: transcript.isEmpty ? null : transcript,
       voiceAudioPath: audioPath,
     );
     if (!mounted) return;
     Navigator.of(context).pop();
     messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          audioPath != null
-              ? 'Voice note saved 🎙️ (tap ▶ to listen)'
-              : 'Voice note saved 🎙️',
-        ),
-        duration: const Duration(milliseconds: 1400),
+      const SnackBar(
+        content: Text('Voice note saved 🎙️ — transcribe it from the card'),
+        duration: Duration(milliseconds: 1400),
       ),
     );
   }
@@ -793,6 +807,101 @@ class _EditDumpSheetState extends State<_EditDumpSheet> {
         const SizedBox(height: 16),
         PrimaryButton(label: 'Save', onPressed: _save),
       ],
+    );
+  }
+}
+
+/// Inline "transcribe this recording" control on voice dump cards. Runs
+/// whisper on-device against the saved audio file (see TranscriptionService)
+/// and attaches the result to the dump; the card then rebuilds showing the
+/// transcript preview and the merge button in this button's place. The first
+/// tap ever also downloads the model, so a heads-up snackbar precedes it.
+class _TranscribeButton extends StatefulWidget {
+  final String id;
+  final String path;
+  final Color tint;
+  const _TranscribeButton({
+    required this.id,
+    required this.path,
+    required this.tint,
+  });
+
+  @override
+  State<_TranscribeButton> createState() => _TranscribeButtonState();
+}
+
+class _TranscribeButtonState extends State<_TranscribeButton> {
+  bool _busy = false;
+
+  Future<void> _run() async {
+    if (_busy) return;
+    final app = context.read<AppState>();
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _busy = true);
+    try {
+      final svc = TranscriptionService.instance;
+      if (!await svc.modelReady) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Downloading speech model — one-time, ~150 MB. Transcription '
+              'starts right after.',
+            ),
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
+      final text = await svc.transcribeFile(widget.path);
+      if (!mounted) return;
+      if (text.isEmpty) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('No speech detected in this recording.'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      } else {
+        app.setDumpTranscript(widget.id, text);
+      }
+    } catch (_) {
+      if (mounted) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Transcription failed — try again.'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_busy) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(8, 6, 4, 4),
+        child: SizedBox(
+          width: 16,
+          height: 16,
+          child: CircularProgressIndicator(strokeWidth: 2, color: widget.tint),
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: InkResponse(
+        onTap: _run,
+        radius: 16,
+        child: Tooltip(
+          message: 'Transcribe recording',
+          child: Padding(
+            padding: const EdgeInsets.all(4),
+            child: Icon(Icons.transcribe, size: 20, color: widget.tint),
+          ),
+        ),
+      ),
     );
   }
 }

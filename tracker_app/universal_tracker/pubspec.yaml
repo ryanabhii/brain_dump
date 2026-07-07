@@ -25,13 +25,15 @@ dependencies:
   googleapis: ^16.0.0
   extension_google_sign_in_as_googleapis_auth: ^3.0.0
   http: ^1.6.0
-  speech_to_text: ^7.4.0
-  # Local audio capture (saved alongside the on-device transcript so the user
-  # can both read and listen to a brain dump later) and playback for the
-  # saved m4a files. `path_provider` gives us a cross-platform docs dir.
+  # Voice brain dumps, audio-first: `record` owns the mic exclusively and
+  # saves an m4a (running a live recognizer alongside it made the two fight
+  # over the mic); `audioplayers` plays the file back; `whisper_ggml` runs
+  # whisper.cpp on-device to transcribe the file after the fact.
+  # `path_provider` gives us a cross-platform docs dir.
   record: ^5.1.2
   audioplayers: ^6.1.0
   path_provider: ^2.1.4
+  whisper_ggml: ^1.7.0
 
 dev_dependencies:
   flutter_test:

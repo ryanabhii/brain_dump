@@ -467,6 +467,22 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     );
   }
 
+  /// Attach a transcript to an existing voice dump. Audio-first flow: the
+  /// note is captured with audio only, and the user transcribes it later
+  /// from the card (on-device whisper — see TranscriptionService).
+  void setDumpTranscript(String id, String transcript) {
+    final t = transcript.trim();
+    if (t.isEmpty) return;
+    final d = _data!;
+    _commit(
+      d.copyWith(
+        braindumps: d.braindumps
+            .map((b) => b.id == id ? b.copyWith(voiceTranscript: t) : b)
+            .toList(),
+      ),
+    );
+  }
+
   void addDump({
     required String text,
     String? tag,
