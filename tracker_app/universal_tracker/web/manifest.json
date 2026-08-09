@@ -1,11 +1,11 @@
 {
-    "name": "universal_tracker",
-    "short_name": "universal_tracker",
+    "name": "Tracker by ryanabhii",
+    "short_name": "Tracker",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Tracker by ryanabhii - Track anything, anywhere.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
