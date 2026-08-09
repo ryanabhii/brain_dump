@@ -68,7 +68,7 @@ header {
   font-family: var(--font-headings);
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--accent-cyan); /* bot-readable fallback */
   text-decoration: none;
   background: var(--accent-gradient);
   -webkit-background-clip: text;
@@ -129,6 +129,7 @@ nav a:hover, nav a.active {
   font-size: 2rem;
   font-weight: 800;
   margin-bottom: 0.75rem;
+  color: var(--accent-cyan); /* bot-readable fallback */
   background: var(--accent-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -184,12 +185,14 @@ h1 {
   font-weight: 800;
   line-height: 1.15;
   margin-bottom: 1.5rem;
+  color: var(--text-primary); /* bot-readable fallback */
   background: linear-gradient(to right, #ffffff, var(--text-secondary));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 h1 span {
+  color: var(--accent-cyan); /* bot-readable fallback */
   background: var(--accent-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -200,6 +203,7 @@ h1 span {
   font-size: 1.5rem;
   font-weight: 600;
   margin-bottom: 1.25rem;
+  color: var(--accent-cyan); /* bot-readable fallback */
   background: var(--accent-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -305,6 +309,7 @@ h1 span {
   font-size: 2rem;
   margin-bottom: 1.25rem;
   display: inline-block;
+  color: var(--accent-cyan); /* bot-readable fallback */
   background: var(--accent-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
