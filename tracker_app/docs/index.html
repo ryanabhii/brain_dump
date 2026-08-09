@@ -3,9 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="google-site-verification" content="19Z0WSGYQAw2_KnEivzGRIxZsdQXcJX0O51JEpqZapM" />
-  <title>Tracker by ryanabhii — Local-First Personal Organiser</title>
-  <meta name="description" content="Tracker by ryanabhii is a secure, local-first personal organiser. Track logs, trades, spending, voice notes, and more. Your data never leaves your device.">
+
+  <!-- Primary title — must match GCP OAuth consent screen "App name" exactly -->
+  <title>Tracker by ryanabhii</title>
+
+  <!-- application-name meta — explicitly tells crawlers the app name -->
+  <meta name="application-name" content="Tracker by ryanabhii">
+
+  <!-- Description -->
+  <meta name="description" content="Tracker by ryanabhii is a local-first personal organiser for Android. Log killzones, track trades, manage spending, record voice notes, and sync privately via Google Drive.">
+
+  <!-- Open Graph tags — also scanned by Google's verification crawler -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://tracker.freedev.app/">
+  <meta property="og:title" content="Tracker by ryanabhii">
+  <meta property="og:site_name" content="Tracker by ryanabhii">
+  <meta property="og:description" content="Tracker by ryanabhii is a local-first personal organiser for Android. Log killzones, track trades, manage spending, record voice notes, and sync privately via Google Drive.">
+
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -27,68 +41,86 @@
     </div>
   </header>
 
-  <!-- Hero Section -->
-  <section class="hero">
-    <div class="hero-content animate-fade-in">
-      <h1>Tracker by ryanabhii<br><span>Local-First Personal Organiser</span></h1>
-      <p class="tagline">
-        Tracker by ryanabhii is a secure, on-device assistant designed to capture your brain dumps, track habits, log trades, manage spendings, and keep you organized—all while respecting your privacy.
-      </p>
-      <div class="cta-group">
-        <a href="privacy.html" class="btn btn-primary">Privacy Policy</a>
-        <a href="terms.html" class="btn btn-secondary">Terms of Service</a>
+  <!-- App identity + purpose — placed as the very first visible text block -->
+  <main>
+
+    <section class="app-identity">
+      <div class="identity-inner">
+        <img src="app_icon.svg" alt="Tracker by ryanabhii app icon" class="identity-icon">
+        <div class="identity-text">
+          <h1>Tracker by ryanabhii</h1>
+          <p class="identity-tagline">
+            <strong>Tracker by ryanabhii</strong> is a local-first personal organiser for Android.
+            It lets you log killzones, track trades and performance metrics, manage household
+            expenses, capture voice brain-dumps (transcribed on-device), and set reminders —
+            entirely offline, with no backend server. When you optionally sign in with Google,
+            the app uses the <strong>Google Drive <code>drive.appdata</code> scope</strong> to
+            read and write backup files in a private hidden folder in
+            <em>your own</em> Google Drive — invisible to other apps, inaccessible to the developer.
+          </p>
+        </div>
       </div>
-    </div>
+    </section>
 
-    <!-- Core App Features -->
-    <div class="features">
-      <div class="features-grid">
-        
-        <!-- Feature 1 -->
-        <div class="feature-card">
-          <div class="feature-icon">🔒</div>
-          <h3>Local-First Data</h3>
-          <p>Everything you create is stored locally on your device in secure storage. We have no backend servers and never collect or view your data.</p>
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="hero-content animate-fade-in">
+        <p class="subtitle">Local-First Personal Organiser</p>
+        <p class="tagline">
+          All your data stays on your device. Sync privately between your own devices via Google Drive.
+          Zero analytics. Zero backend. Zero compromise on privacy.
+        </p>
+        <div class="cta-group">
+          <a href="privacy.html" class="btn btn-primary">Privacy Policy</a>
+          <a href="terms.html" class="btn btn-secondary">Terms of Service</a>
         </div>
-
-        <!-- Feature 2 -->
-        <div class="feature-card">
-          <div class="feature-icon">🎙️</div>
-          <h3>On-Device Transcription</h3>
-          <p>Record audio notes and transcribe them with a bundled speech-to-text Whisper model operating entirely offline on your device.</p>
-        </div>
-
-        <!-- Feature 3 -->
-        <div class="feature-card">
-          <div class="feature-icon">☁️</div>
-          <h3>Private Google Drive Sync</h3>
-          <p>Sync safely between your own devices using your personal Google account. All sync files are kept in a hidden App Data folder in your Google Drive.</p>
-        </div>
-
-        <!-- Feature 4 -->
-        <div class="feature-card">
-          <div class="feature-icon">📈</div>
-          <h3>Trading &amp; Metrics</h3>
-          <p>Log trades, monitor killzones, and review performance indicators with customized on-device dashboard modules.</p>
-        </div>
-
-        <!-- Feature 5 -->
-        <div class="feature-card">
-          <div class="feature-icon">💸</div>
-          <h3>Spend Tracking</h3>
-          <p>Organize subscriptions, recurring expenses, and grocery budgets in private local registers with clean breakdowns.</p>
-        </div>
-
-        <!-- Feature 6 -->
-        <div class="feature-card">
-          <div class="feature-icon">🛡️</div>
-          <h3>Zero Analytics</h3>
-          <p>We do not use any telemetry, tracking scripts, crash reporters, or advertising SDKs. Your app usage remains completely confidential.</p>
-        </div>
-
       </div>
-    </div>
-  </section>
+
+      <!-- Feature grid -->
+      <div class="features">
+        <div class="features-grid">
+
+          <div class="feature-card">
+            <div class="feature-icon">🔒</div>
+            <h3>Local-First Data</h3>
+            <p>Everything you create is stored locally on your device. No backend servers. We never see or collect your data.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">🎙️</div>
+            <h3>On-Device Transcription</h3>
+            <p>Record audio notes and transcribe them with a bundled Whisper speech model — entirely offline.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">☁️</div>
+            <h3>Private Google Drive Sync</h3>
+            <p>Optional sync between your own devices via the <code>drive.appdata</code> scope — a hidden folder only this app can access. The developer has zero access.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">📈</div>
+            <h3>Trading &amp; Metrics</h3>
+            <p>Log trades, monitor killzones, and review performance indicators with on-device dashboard modules.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">💸</div>
+            <h3>Spend Tracking</h3>
+            <p>Organise subscriptions, recurring expenses, and grocery budgets in private local registers.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">🛡️</div>
+            <h3>Zero Analytics</h3>
+            <p>No telemetry, no tracking scripts, no crash reporters, no advertising SDKs. Your usage is completely confidential.</p>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+  </main>
 
   <!-- Footer -->
   <footer>
