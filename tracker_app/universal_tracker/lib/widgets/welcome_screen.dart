@@ -35,7 +35,7 @@ const List<WelcomePage> kWelcomePages = [
   WelcomePage(
     icon: Icons.waving_hand_outlined,
     accent: AppColors.cyan300,
-    title: 'Welcome to Tracker',
+    title: 'Welcome to Universal Tracker',
     subtitle:
         'A local-first, offline-friendly app for trading sessions, spend, '
         'capture, household, and body — all in one place.',

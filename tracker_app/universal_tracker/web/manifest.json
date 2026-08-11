@@ -1,11 +1,11 @@
 {
-    "name": "Tracker by ryanabhii",
-    "short_name": "Tracker",
+    "name": "Universal Tracker: by Xenon54",
+    "short_name": "Universal Tracker",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "Tracker by ryanabhii - Track anything, anywhere.",
+    "description": "Universal Tracker: by Xenon54 - Track anything, anywhere.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

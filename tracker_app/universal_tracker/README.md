@@ -1,4 +1,4 @@
-# Tracker
+# Universal Tracker
 
 A local-first personal organiser for **killzones, spend, capture, household,
 body and trading**, with optional Google Drive sync (your data, your account,
