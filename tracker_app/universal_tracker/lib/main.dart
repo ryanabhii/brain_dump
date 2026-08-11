@@ -35,7 +35,7 @@ class TrackerApp extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (_) => AppState(StorageService(), localTimezone: timezoneName),
       child: MaterialApp(
-        title: 'Universal Tracker: by Xenon54',
+        title: 'Xenon Universal Tracker',
         debugShowCheckedModeBanner: false,
         theme: buildAppTheme(),
         // NOTE: we deliberately do NOT clamp width here via `builder:` —

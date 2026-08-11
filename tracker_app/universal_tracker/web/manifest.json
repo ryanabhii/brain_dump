@@ -1,11 +1,11 @@
 {
-    "name": "Universal Tracker: by Xenon54",
+    "name": "Xenon Universal Tracker",
     "short_name": "Universal Tracker",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "Universal Tracker: by Xenon54 - Track anything, anywhere.",
+    "description": "Xenon Universal Tracker - Track anything, anywhere.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
