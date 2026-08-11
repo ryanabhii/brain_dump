@@ -117,6 +117,14 @@ a:hover {
   color: transparent;
 }
 
+.hero p.tagline {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 16px;
+  max-width: 40ch;
+}
+
 .hero p.lead {
   font-size: 1.15rem;
   color: var(--muted);

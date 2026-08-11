@@ -795,7 +795,7 @@ class ProfileScreen extends StatelessWidget {
               const SizedBox(height: 24),
               const Center(
                 child: Text(
-                  'Xenon Universal Tracker · v0.2',
+                  'Xenon54 Universal Tracker · v0.2',
                   style: TextStyle(fontSize: 10, color: AppColors.zinc600),
                 ),
               ),

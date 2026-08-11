@@ -107,7 +107,7 @@ class _PermissionsDialogState extends State<PermissionsDialog> {
               ),
               const SizedBox(height: 4),
               const Text(
-                'Xenon Universal Tracker works fully offline. These unlock optional features '
+                'Xenon54 Universal Tracker works fully offline. These unlock optional features '
                 "— grant whatever you'd like.",
                 style: TextStyle(fontSize: 12, color: AppColors.zinc500),
               ),

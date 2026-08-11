@@ -13,7 +13,7 @@
          whisper transcription. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <application
-        android:label="Xenon Universal Tracker"
+        android:label="Xenon54 Universal Tracker"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon"
         android:allowBackup="false"
