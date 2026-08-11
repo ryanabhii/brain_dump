@@ -74,10 +74,11 @@ application id is `com.xenon54.tracker`. To enable sign-in:
    `android/app/google-services.json`.
 4. In Google Cloud Console → APIs & Services → **enable the Google Drive
    API** for the same project.
-5. The OAuth consent screen must include the scopes `auth/drive` and
-   `auth/drive.appdata`. While the app is in Testing mode you can add up to
-   100 testers; for general availability you need to go through OAuth
-   verification.
+5. The OAuth consent screen must include only the `auth/drive.appdata` scope
+   (the app never requests the full `auth/drive` scope — declaring it would
+   push the project into restricted-scope CASA review). While the app is in
+   Testing mode you can add up to 100 testers; for general availability you
+   need to go through OAuth verification.
 
 The web client id can also be injected at build time without editing code:
 

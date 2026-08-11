@@ -1,51 +1,55 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Privacy Policy — Tracker by ryanabhii</title>
-  <meta name="description" content="Read the Privacy Policy for Tracker by ryanabhii. Learn how your local data is protected and how Google Drive sync works.">
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-
-  <!-- Navigation -->
-  <header>
-    <div class="nav-container">
-      <a href="index.html" class="logo">
-        <img src="app_icon.svg" alt="Tracker by ryanabhii Logo" class="logo-img">
-        Tracker by ryanabhii
-      </a>
-      <nav>
-        <ul>
-          <li><a href="index.html">Home</a></li>
-          <li><a href="privacy.html" class="active">Privacy Policy</a></li>
-          <li><a href="terms.html">Terms of Service</a></li>
-        </ul>
-      </nav>
-    </div>
-  </header>
-
-  <!-- Content -->
-  <main class="page-content animate-fade-in">
-    <article class="policy-card">
-      <div class="policy-header">
-        <h1>Privacy Policy</h1>
-        <p class="policy-date">Last updated: July 7, 2026</p>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Privacy Policy — Tracker</title>
+    <meta
+      name="description"
+      content="Privacy policy for the Tracker app, including how it accesses, uses and stores Google user data via the Google Drive appDataFolder."
+    />
+    <link rel="icon" type="image/svg+xml" href="app_icon.svg" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container nav">
+        <a class="brand" href="/">
+          <img src="app_icon.svg" alt="Tracker app icon" />
+          <span>Tracker</span>
+        </a>
+        <nav class="nav-links">
+          <a href="index.html#features">Features</a>
+          <a href="index.html#drive">Google Drive</a>
+          <a href="terms.html">Terms</a>
+          <a href="index.html">Home</a>
+        </nav>
       </div>
+    </header>
 
-      <div class="policy-body">
+    <main class="doc">
+      <div class="container">
+        <h1>Privacy Policy — Tracker</h1>
+        <p class="updated">Last updated: 11 August 2026</p>
+
         <p>
-          <strong>Tracker by ryanabhii</strong> ("the app") is a local-first personal organiser developed by <strong>Xenon54</strong>. This document explains exactly what data the app collects, where it goes, and what control you have over it.
+          <strong>Tracker</strong> ("the app") is a local-first personal
+          organiser developed by <strong>Abhishek Kumar</strong>. This document
+          explains exactly what data the app collects, where it goes, and what
+          control you have over it.
         </p>
 
-        <blockquote>
-          <p><strong>TL;DR</strong> — Your data lives on your device. The only network sync is your own Google Drive, only when you sign in, and we never see or store any of it.</p>
-        </blockquote>
+        <div class="callout">
+          <strong>TL;DR</strong> — Your data lives on your device. The only
+          network sync is your own Google Drive, only when you sign in, and we
+          never see or store any of it.
+        </div>
 
         <h2>1. Data we collect</h2>
         <p>
-          We do not operate any backend server. The app does not transmit any data to servers controlled by Xenon54. Specifically, we do not collect:
+          We do not operate any backend server. The app does not transmit any
+          data to servers controlled by the developer. Specifically, we do not
+          collect:
         </p>
         <ul>
           <li>Account identifiers, email addresses, names, or contact information.</li>
@@ -56,84 +60,166 @@
 
         <h2>2. Data you create</h2>
         <p>
-          Everything you enter — killzones, trades, subscriptions, brain-dump notes, grocery items, body / nutrition logs, and reminder settings — is stored <strong>locally on your device</strong> using Android's <code>SharedPreferences</code>. It never leaves the device unless you opt in to Google Drive sync (see Section 3).
+          Everything you enter — killzones, trades, subscriptions, brain-dump
+          notes, grocery items, body / nutrition logs, and reminder settings — is
+          stored <strong>locally on your device</strong> using the platform's
+          local storage. It never leaves the device unless you opt in to Google
+          Drive sync (see §3).
         </p>
 
         <h3>Microphone and voice notes</h3>
-        <p>
-          If you grant microphone access and record a voice brain dump:
-        </p>
+        <p>If you grant microphone access and record a voice brain dump:</p>
         <ul>
-          <li><strong>An audio recording</strong> (<code>.m4a</code>) is saved in the app's private documents folder <strong>on your device only</strong>, so you can replay the note later.</li>
-          <li><strong>A transcript</strong> is created only if you tap the transcribe button on the note, and is produced <strong>entirely on-device</strong> by a bundled Whisper speech model. Your audio is never sent anywhere for transcription. The first transcription downloads the model file (~150 MB) from Hugging Face — that request fetches the model only and carries none of your data or audio.</li>
+          <li>
+            <strong>An audio recording</strong> (<code>.m4a</code>) is saved in
+            the app's private documents folder <strong>on your device only</strong>,
+            so you can replay the note later.
+          </li>
+          <li>
+            <strong>A transcript</strong> is created only if you tap the
+            transcribe button on the note, and is produced
+            <strong>entirely on-device</strong> by a bundled speech model. Your
+            audio is never sent anywhere for transcription. The first
+            transcription downloads the model file (~150 MB) from Hugging Face —
+            that request fetches the model only and carries none of your data or
+            audio.
+          </li>
         </ul>
         <p>
-          Recordings are never uploaded anywhere — they are excluded from Drive sync and backups. Deleting a voice note (or uninstalling the app) deletes its recording. Microphone access is optional; typing works without it.
+          Recordings are never uploaded anywhere — they are excluded from Drive
+          sync and backups. Deleting a voice note (or uninstalling the app)
+          deletes its recording. Microphone access is optional; typing works
+          without it.
         </p>
 
         <h2>3. Optional Google Drive sync</h2>
         <p>
-          If you sign in to Google from the Profile screen, the app uses <strong>Google Sign-In</strong> to authenticate with your account and the <strong>Google Drive API</strong> to read and write a small number of JSON files, all inside the hidden <code>appDataFolder</code> of <strong>your own Drive</strong> — a private area only this app can see, invisible to other apps and to your normal Drive file list:
+          If you sign in to Google from the Profile screen, the app uses
+          <strong>Google Sign-In</strong> to authenticate with your account and
+          the <strong>Google Drive API</strong> to read and write a small number
+          of JSON files, all inside the hidden <code>appDataFolder</code> of
+          <strong>your own Drive</strong> — a private area only this app can see,
+          invisible to other apps and to your normal Drive file list:
         </p>
         <ul>
-          <li><strong>Backup file</strong> — a serialised copy of your app data, written when you tap "Back up" and read when you tap "Restore".</li>
-          <li><strong>Per-tab sync files</strong> — one JSON file per section you enable for sync (killzones, spend, capture, household, body, trading). Signing in with the same Google account on another device syncs these sections there too.</li>
+          <li>
+            <strong>Backup file</strong> — a serialised copy of your app data,
+            written when you tap "Back up" and read when you tap "Restore".
+          </li>
+          <li>
+            <strong>Per-tab sync files</strong> — one JSON file per section you
+            enable for sync (killzones, spend, capture, household, body,
+            trading). Signing in with the same Google account on another device
+            syncs these sections there too.
+          </li>
         </ul>
         <p>
-          These files are owned by <strong>your Google account</strong>. Xenon54 has no access to them, no copy of them, and no way to read them.
+          These files are owned by <strong>your Google account</strong>. The
+          developer has no access to them, no copy of them, and no way to read
+          them.
         </p>
         <p>The only OAuth scope requested is:</p>
         <ul>
-          <li><code>https://www.googleapis.com/auth/drive.appdata</code> — read/write access to the app's own hidden data folder, and nothing else in your Drive. The app cannot see, modify, or share any of your other Drive files.</li>
+          <li>
+            <code>https://www.googleapis.com/auth/drive.appdata</code> —
+            read/write access to the app's own hidden data folder, and nothing
+            else in your Drive. The app cannot see, modify, or share any of your
+            other Drive files.
+          </li>
         </ul>
 
-        <h2>4. Sharing with other people</h2>
+        <h2>4. Limited Use disclosure</h2>
         <p>
-          The app has no sharing features. Your data is never made visible to any other person or account — sync is strictly between your own devices, signed in to your own Google account.
+          Tracker's use and transfer of information received from Google APIs
+          adheres to the
+          <a
+            href="https://developers.google.com/terms/api-services-user-data-policy"
+            >Google API Services User Data Policy</a
+          >, including the <strong>Limited Use</strong> requirements. Specifically:
+        </p>
+        <ul>
+          <li>
+            Data obtained through the Google Drive scope is used only to provide
+            and improve the app's backup and cross-device sync features that are
+            visible to you.
+          </li>
+          <li>We do not transfer this data to any third party.</li>
+          <li>We do not use this data for advertising.</li>
+          <li>
+            No human reads this data, except with your explicit consent for a
+            specific support request, to comply with applicable law, or as part
+            of security operations.
+          </li>
+        </ul>
+
+        <h2>5. Sharing with other people</h2>
+        <p>
+          The app has no sharing features. Your data is never made visible to any
+          other person or account — sync is strictly between your own devices,
+          signed in to your own Google account.
         </p>
 
-        <h2>5. Notifications</h2>
+        <h2>6. Notifications</h2>
         <p>
-          Reminders (killzone start alerts, brain-dump reminders, daily review) are scheduled by the OS using <code>flutter_local_notifications</code>. Notification contents are constructed entirely on-device from your own data. No notification content is transmitted anywhere.
+          Reminders (killzone start alerts, brain-dump reminders, daily review)
+          are scheduled by the OS. Notification contents are constructed entirely
+          on-device from your own data. No notification content is transmitted
+          anywhere.
         </p>
 
-        <h2>6. Children's privacy</h2>
+        <h2>7. Children's privacy</h2>
         <p>
-          The app is not directed at children under 13. We do not knowingly collect any information from children.
+          The app is not directed at children under 13. We do not knowingly
+          collect any information from children.
         </p>
 
-        <h2>7. Your controls</h2>
+        <h2>8. Your controls</h2>
         <ul>
           <li><strong>Reset</strong> the app from the Profile screen to wipe all local data.</li>
-          <li><strong>Sign out</strong> from Google to stop all Drive sync. Signing out also revokes the OAuth grant, so the next sign-in re-prompts for account selection and scope consent.</li>
-          <li><strong>Delete the app's hidden Drive data</strong> from Google Drive &rarr; Settings &rarr; Manage apps &rarr; Tracker &rarr; "Delete hidden app data".</li>
+          <li>
+            <strong>Sign out</strong> from Google to stop all Drive sync. Signing
+            out also revokes the OAuth grant, so the next sign-in re-prompts for
+            account selection and scope consent.
+          </li>
+          <li>
+            <strong>Delete the app's hidden Drive data</strong> from Google Drive →
+            Settings → Manage apps → Tracker → "Delete hidden app data".
+          </li>
           <li><strong>Uninstall</strong> the app to remove all local data from your device.</li>
         </ul>
 
-        <h2>8. Changes to this policy</h2>
+        <h2>9. Changes to this policy</h2>
         <p>
-          Material changes will be reflected by updating the date at the top of this document. The current version is always the one shipped in the published app binary.
+          Material changes will be reflected by updating the date at the top of
+          this document. The current version is always the one shipped in the
+          published app binary.
         </p>
 
-        <h2>9. Contact</h2>
+        <h2>10. Contact</h2>
         <p>
-          Questions or concerns: open an issue at <a href="https://github.com/ryanabhii/brain_dump/issues" target="_blank" rel="noopener noreferrer">https://github.com/ryanabhii/brain_dump/issues</a>.
+          Questions or concerns: open an issue at
+          <a href="https://github.com/ryanabhii/brain_dump/issues"
+            >github.com/ryanabhii/brain_dump/issues</a
+          >
+          or email
+          <a href="mailto:contact@ryanabhii.me">contact@ryanabhii.me</a>.
         </p>
       </div>
-    </article>
-  </main>
+    </main>
 
-  <!-- Footer -->
-  <footer>
-    <div class="footer-container">
-      <div class="footer-links">
-        <a href="index.html">Home</a>
-        <a href="privacy.html">Privacy Policy</a>
-        <a href="terms.html">Terms of Service</a>
+    <footer class="site-footer">
+      <div class="container footer-row">
+        <div>
+          <strong>Tracker</strong> — by Abhishek Kumar<br />
+          Personal, local-first organiser.
+        </div>
+        <nav class="footer-links">
+          <a href="index.html">Home</a>
+          <a href="terms.html">Terms</a>
+          <a href="https://github.com/ryanabhii/brain_dump">Source</a>
+          <a href="https://github.com/ryanabhii/brain_dump/issues">Support</a>
+        </nav>
       </div>
-      <p class="copyright">&copy; 2026 Tracker by ryanabhii. Developed by Xenon54. All rights reserved.</p>
-    </div>
-  </footer>
-
-</body>
+    </footer>
+  </body>
 </html>

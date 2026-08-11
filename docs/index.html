@@ -1,141 +1,173 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tracker — a private, local-first personal organiser</title>
+    <meta
+      name="description"
+      content="Tracker is a local-first personal organiser for killzones, spend, capture, household, body and trading, with optional end-to-end-private Google Drive backup to your own account."
+    />
+    <link rel="icon" type="image/svg+xml" href="app_icon.svg" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container nav">
+        <a class="brand" href="/">
+          <img src="app_icon.svg" alt="Tracker app icon" />
+          <span>Tracker</span>
+        </a>
+        <nav class="nav-links">
+          <a href="#features">Features</a>
+          <a href="#privacy">Privacy</a>
+          <a href="#drive">Google Drive</a>
+          <a href="privacy.html">Privacy Policy</a>
+          <a href="terms.html">Terms</a>
+        </nav>
+      </div>
+    </header>
 
-  <!-- Primary title — must match GCP OAuth consent screen "App name" exactly -->
-  <title>Tracker by ryanabhii</title>
-
-  <!-- application-name meta — explicitly tells crawlers the app name -->
-  <meta name="application-name" content="Tracker by ryanabhii">
-
-  <!-- Description -->
-  <meta name="description" content="Tracker by ryanabhii is a local-first personal organiser for Android. Log killzones, track trades, manage spending, record voice notes, and sync privately via Google Drive.">
-
-  <!-- Open Graph tags — also scanned by Google's verification crawler -->
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://ryanabhii.me/">
-  <meta property="og:title" content="Tracker by ryanabhii">
-  <meta property="og:site_name" content="Tracker by ryanabhii">
-  <meta property="og:description" content="Tracker by ryanabhii is a local-first personal organiser for Android. Log killzones, track trades, manage spending, record voice notes, and sync privately via Google Drive.">
-
-  <!-- Canonical URL — matches the homepage submitted to the OAuth consent screen -->
-  <link rel="canonical" href="https://ryanabhii.me/">
-
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-
-  <!-- Navigation -->
-  <header>
-    <div class="nav-container">
-      <a href="index.html" class="logo">
-        <img src="app_icon.svg" alt="Tracker by ryanabhii Logo" class="logo-img">
-        Tracker by ryanabhii
-      </a>
-      <nav>
-        <ul>
-          <li><a href="index.html" class="active">Home</a></li>
-          <li><a href="privacy.html">Privacy Policy</a></li>
-          <li><a href="terms.html">Terms of Service</a></li>
-        </ul>
-      </nav>
-    </div>
-  </header>
-
-  <!-- App identity + purpose — placed as the very first visible text block -->
-  <main>
-
-    <section class="app-identity">
-      <div class="identity-inner">
-        <img src="app_icon.svg" alt="Tracker by ryanabhii app icon" class="identity-icon">
-        <div class="identity-text">
-          <h1>Tracker by ryanabhii</h1>
-          <p class="identity-tagline">
-            <strong>Tracker by ryanabhii</strong> is a local-first personal organiser for Android.
-            It lets you log killzones, track trades and performance metrics, manage household
-            expenses, capture voice brain-dumps (transcribed on-device), and set reminders —
-            entirely offline, with no backend server. When you optionally sign in with Google,
-            the app uses the <strong>Google Drive <code>drive.appdata</code> scope</strong> to
-            read and write backup files in a private hidden folder in
-            <em>your own</em> Google Drive — invisible to other apps, inaccessible to the developer.
+    <main>
+      <!-- Hero -->
+      <section class="hero container" id="top">
+        <div>
+          <h1>Your whole life, <span class="accent">tracked privately</span>.</h1>
+          <p class="lead">
+            Tracker is a local-first personal organiser for killzones, spend,
+            capture, household, body and trading. Everything works offline and
+            lives on your device — with optional backup to <strong>your own</strong>
+            Google Drive.
           </p>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="#drive">How backup works</a>
+            <a class="btn btn-ghost" href="privacy.html">Read the privacy policy</a>
+          </div>
         </div>
-      </div>
-    </section>
-
-    <!-- Hero Section -->
-    <section class="hero">
-      <div class="hero-content animate-fade-in">
-        <p class="subtitle">Local-First Personal Organiser</p>
-        <p class="tagline">
-          All your data stays on your device. Sync privately between your own devices via Google Drive.
-          Zero analytics. Zero backend. Zero compromise on privacy.
-        </p>
-        <div class="cta-group">
-          <a href="privacy.html" class="btn btn-primary">Privacy Policy</a>
-          <a href="terms.html" class="btn btn-secondary">Terms of Service</a>
+        <div class="hero-art">
+          <img src="app_icon.svg" alt="Tracker app icon" />
         </div>
-      </div>
+      </section>
 
-      <!-- Feature grid -->
-      <div class="features">
-        <div class="features-grid">
-
-          <div class="feature-card">
-            <div class="feature-icon">🔒</div>
-            <h3>Local-First Data</h3>
-            <p>Everything you create is stored locally on your device. No backend servers. We never see or collect your data.</p>
+      <!-- Features -->
+      <section id="features">
+        <div class="container">
+          <h2 class="section-title">One app, six focused trackers</h2>
+          <p class="section-sub">
+            Each section is a purpose-built tab. Use only what you need — nothing
+            is ever sent to a server we control.
+          </p>
+          <div class="grid">
+            <article class="card">
+              <div class="ic">🎯</div>
+              <h3>Killzones</h3>
+              <p>Plan focus windows and get OS reminders when each one starts.</p>
+            </article>
+            <article class="card">
+              <div class="ic">💸</div>
+              <h3>Spend</h3>
+              <p>Log subscriptions and expenses to see where your money goes.</p>
+            </article>
+            <article class="card">
+              <div class="ic">🧠</div>
+              <h3>Capture</h3>
+              <p>
+                Quick brain-dump notes, including optional voice notes transcribed
+                on-device.
+              </p>
+            </article>
+            <article class="card">
+              <div class="ic">🛒</div>
+              <h3>Household</h3>
+              <p>Grocery and recurring household items that re-add themselves.</p>
+            </article>
+            <article class="card">
+              <div class="ic">🏋️</div>
+              <h3>Body</h3>
+              <p>Track workouts, body metrics and nutrition logs over time.</p>
+            </article>
+            <article class="card">
+              <div class="ic">📈</div>
+              <h3>Trading</h3>
+              <p>Keep a private journal of trades and review your performance.</p>
+            </article>
           </div>
-
-          <div class="feature-card">
-            <div class="feature-icon">🎙️</div>
-            <h3>On-Device Transcription</h3>
-            <p>Record audio notes and transcribe them with a bundled Whisper speech model — entirely offline.</p>
-          </div>
-
-          <div class="feature-card">
-            <div class="feature-icon">☁️</div>
-            <h3>Private Google Drive Sync</h3>
-            <p>Optional sync between your own devices via the <code>drive.appdata</code> scope — a hidden folder only this app can access. The developer has zero access.</p>
-          </div>
-
-          <div class="feature-card">
-            <div class="feature-icon">📈</div>
-            <h3>Trading &amp; Metrics</h3>
-            <p>Log trades, monitor killzones, and review performance indicators with on-device dashboard modules.</p>
-          </div>
-
-          <div class="feature-card">
-            <div class="feature-icon">💸</div>
-            <h3>Spend Tracking</h3>
-            <p>Organise subscriptions, recurring expenses, and grocery budgets in private local registers.</p>
-          </div>
-
-          <div class="feature-card">
-            <div class="feature-icon">🛡️</div>
-            <h3>Zero Analytics</h3>
-            <p>No telemetry, no tracking scripts, no crash reporters, no advertising SDKs. Your usage is completely confidential.</p>
-          </div>
-
         </div>
+      </section>
+
+      <!-- Privacy -->
+      <section id="privacy">
+        <div class="container">
+          <div class="panel">
+            <h2 class="section-title">Private by design</h2>
+            <p class="section-sub" style="margin-bottom: 0">
+              There is no backend server. We do not collect accounts, analytics,
+              telemetry, or location data. Everything you enter is stored locally
+              on your device.
+            </p>
+            <ul>
+              <li>No sign-up required to use the app.</li>
+              <li>No ads, no trackers, no third-party analytics.</li>
+              <li>Voice recordings stay on-device and are excluded from sync.</li>
+              <li>Reset or uninstall wipes your local data at any time.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Google Drive -->
+      <section id="drive">
+        <div class="container">
+          <h2 class="section-title">Optional Google Drive backup</h2>
+          <p class="section-sub">
+            When (and only when) you sign in with Google from the Profile screen,
+            Tracker can back up and sync your data to your own Google Drive.
+          </p>
+          <div class="grid">
+            <article class="card">
+              <div class="ic">🔒</div>
+              <h3>Your account only</h3>
+              <p>
+                Backups are written to your Drive's hidden
+                <code>appDataFolder</code> — a private area only this app can see.
+                We have no access to them.
+              </p>
+            </article>
+            <article class="card">
+              <div class="ic">🗝️</div>
+              <h3>Minimal access</h3>
+              <p>
+                Tracker requests a single scope,
+                <code>drive.appdata</code>. It cannot see, modify, or share any of
+                your other Drive files.
+              </p>
+            </article>
+            <article class="card">
+              <div class="ic">🔄</div>
+              <h3>Multi-device sync</h3>
+              <p>
+                Sign in on another device with the same account to sync your
+                enabled sections. Sign out to stop and revoke access.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer" id="contact">
+      <div class="container footer-row">
+        <div>
+          <strong>Tracker</strong> — by Abhishek Kumar<br />
+          Personal, local-first organiser.
+        </div>
+        <nav class="footer-links">
+          <a href="privacy.html">Privacy Policy</a>
+          <a href="terms.html">Terms</a>
+          <a href="https://github.com/ryanabhii/brain_dump">Source</a>
+          <a href="https://github.com/ryanabhii/brain_dump/issues">Support</a>
+        </nav>
       </div>
-    </section>
-
-  </main>
-
-  <!-- Footer -->
-  <footer>
-    <div class="footer-container">
-      <div class="footer-links">
-        <a href="index.html">Home</a>
-        <a href="privacy.html">Privacy Policy</a>
-        <a href="terms.html">Terms of Service</a>
-      </div>
-      <p class="copyright">&copy; 2026 Tracker by ryanabhii. Developed by Xenon54. All rights reserved.</p>
-    </div>
-  </footer>
-
-</body>
+    </footer>
+  </body>
 </html>
